@@ -23,6 +23,17 @@
 
 #include "Platform.h"
 
+
+// ============================================================================
+// X86_64 Context
+// ============================================================================
+
+#if defined(QBDI_ARCH_X86_64)
+
+#define PRIRWORD PRIx64
+
+#endif
+
 #ifdef __cplusplus
 namespace QBDI {
 #endif // __cplusplus
