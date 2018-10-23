@@ -55,7 +55,7 @@ protected:
 
 public:
 
-    LLVMTestEnv(std::string cpu = "", std::vector<std::string> mattrs = {}): 
+    LLVMTestEnv(std::string cpu = "", std::vector<std::string> mattrs = {}):
         cpu(cpu), mattrs(mattrs) {}
 
     ~LLVMTestEnv() {

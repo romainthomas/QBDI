@@ -57,7 +57,7 @@ Assembly::Assembly(LLVMCPU* llvmCPU) : llvmCPU(llvmCPU) {
 }
 
 
-llvm::MCDisassembler::DecodeStatus Assembly::getInstruction(llvm::MCInst &instr, uint64_t &size, 
+llvm::MCDisassembler::DecodeStatus Assembly::getInstruction(llvm::MCInst &instr, uint64_t &size,
                                          llvm::ArrayRef< uint8_t > bytes, uint64_t address) const {
     return disassembler->getInstruction(instr, size, bytes, address, llvm::nulls(), llvm::nulls());
 }
@@ -84,6 +84,7 @@ void Assembly::writeInstruction(const llvm::MCInst inst, memory_ostream *stream)
         int64_t value;
         if(fixup.getValue()->evaluateAsAbsolute(value)) {
             llvmCPU->getMAB()->applyFixup(*assembler, fixup, target, llvm::MutableArrayRef<char>((char*) stream->get_ptr() + pos, size), (uint64_t) value, true);
+            assembler->getBackend().applyFixup(*assembler, fixup, target, llvm::MutableArrayRef<char>((char*) stream->get_ptr() + pos, size), (uint64_t) value, true, &MSTI);
         }
         else {
             LogWarning("Assembly::writeInstruction", "Could not evalutate fixup, might crash!");

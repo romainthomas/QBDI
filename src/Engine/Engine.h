@@ -104,7 +104,7 @@ public:
     Engine(const std::string& cpu = "", const std::vector<std::string>& mattrs = {}, VMInstanceRef vminstance = nullptr);
 
     ~Engine();
-    
+
     /*! Obtain the current general purpose register state.
      *
      * @return A structure containing the GPR state.
@@ -151,7 +151,7 @@ public:
      */
     bool         addInstrumentedModuleFromAddr(rword addr);
 
-    /*! Adds all the executable memory maps to the instrumented range set. 
+    /*! Adds all the executable memory maps to the instrumented range set.
      * @return  True if at least one range was added to the instrumented ranges.
      */
     bool         instrumentAllExecutableMaps();
@@ -223,7 +223,7 @@ public:
     void        deleteAllInstrumentations();
 
     /*! Obtain the analysis of an instruction metadata. Analysis results are cached in the VM.
-     *  The validity of the returned pointer is only guaranteed until the end of the callback, else 
+     *  The validity of the returned pointer is only guaranteed until the end of the callback, else
      *  a deepcopy of the structure is required.
      *
      * @param[in] instMetadata Metadata to analyze.
