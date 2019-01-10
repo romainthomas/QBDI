@@ -198,8 +198,8 @@ elseif(${PLATFORM} STREQUAL "macOS-X86" OR ${PLATFORM} STREQUAL "macOS-X86_64")
 
 elseif(${PLATFORM} STREQUAL "android-ARM")
 
-    set(_LLVM_STATIC_LIBS ${_LLVM_STATIC_LIBS} LLVMProfileData.a LLVMARMDisassembler.a LLVMARMCodeGen.a LLVMARMAsmParser.a LLVMARMDesc.a LLVMARMInfo.a LLVMARMAsmPrinter.a)
-    set(LLVM_LIBS -ldl -lz -lm -lgnustl_static)
+    set(_LLVM_STATIC_LIBS ${_LLVM_STATIC_LIBS} LLVMProfileData.a LLVMARMDisassembler.a LLVMARMCodeGen.a LLVMARMAsmParser.a LLVMARMDesc.a LLVMARMInfo.a LLVMARMAsmPrinter.a LLVMARMUtils.a)
+    set(LLVM_LIBS -ldl -lz -lm)
 
 elseif(${PLATFORM} STREQUAL "iOS-ARM")
 
@@ -440,7 +440,7 @@ endif()
 
 
 # Add tests
-add_subdirectory(test)
+#add_subdirectory(test)
 
 # Add tools
 add_subdirectory(tools)

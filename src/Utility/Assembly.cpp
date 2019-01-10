@@ -30,7 +30,7 @@ Assembly::Assembly(LLVMCPU* llvmCPU) : llvmCPU(llvmCPU) {
         new llvm::raw_null_ostream()
     );
 
-    objectWriter = std::unique_ptr<llvm::MCObjectWriter>(
+    auto objectWriter = std::unique_ptr<llvm::MCObjectWriter>(
         llvmCPU->getMAB()->createObjectWriter(*null_ostream)
     );
 
@@ -38,8 +38,20 @@ Assembly::Assembly(LLVMCPU* llvmCPU) : llvmCPU(llvmCPU) {
         llvmCPU->getTarget()->createMCDisassembler(*llvmCPU->getMSTI(), *llvmCPU->getMCTX())
     );
 
+    auto MAB = std::unique_ptr<llvm::MCAsmBackend>(
+        llvmCPU->getTarget()->createMCAsmBackend(*llvmCPU->getMSTI(), *llvmCPU->getMRI(), llvm::MCTargetOptions())
+    );
+    auto MCE = std::unique_ptr<llvm::MCCodeEmitter>(
+        llvmCPU->getTarget()->createMCCodeEmitter(*llvmCPU->getMII(), *llvmCPU->getMRI(), *llvmCPU->getMCTX())
+    );
+
+
     assembler = std::unique_ptr<llvm::MCAssembler>(
-        new llvm::MCAssembler(*llvmCPU->getMCTX(), *llvmCPU->getMAB(), *llvmCPU->getMCE(), *objectWriter)
+        new llvm::MCAssembler(
+          *llvmCPU->getMCTX(),
+          std::move(MAB),
+          std::move(MCE),
+          std::move(objectWriter))
     );
 
     // TODO: find better way to handle variant
@@ -83,8 +95,8 @@ void Assembly::writeInstruction(const llvm::MCInst inst, memory_ostream *stream)
         llvm::MCFixup fixup = fixups.pop_back_val();
         int64_t value;
         if(fixup.getValue()->evaluateAsAbsolute(value)) {
-            llvmCPU->getMAB()->applyFixup(*assembler, fixup, target, llvm::MutableArrayRef<char>((char*) stream->get_ptr() + pos, size), (uint64_t) value, true);
-            assembler->getBackend().applyFixup(*assembler, fixup, target, llvm::MutableArrayRef<char>((char*) stream->get_ptr() + pos, size), (uint64_t) value, true, &MSTI);
+            llvmCPU->getMAB()->applyFixup(*assembler, fixup, target, llvm::MutableArrayRef<char>((char*) stream->get_ptr() + pos, size), (uint64_t) value, true, llvmCPU->getMSTI());
+            assembler->getBackend().applyFixup(*assembler, fixup, target, llvm::MutableArrayRef<char>((char*) stream->get_ptr() + pos, size), (uint64_t) value, true, llvmCPU->getMSTI());
         }
         else {
             LogWarning("Assembly::writeInstruction", "Could not evalutate fixup, might crash!");

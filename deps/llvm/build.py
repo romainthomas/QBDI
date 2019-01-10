@@ -94,43 +94,19 @@ def build_llvm(llvm_dir, build_dir, arch, platform, arm_arch=None):
         ]
     elif platform == "android":
         ndk_path = Path.home() / "android-ndk-r13b"
-        api_level = 23
+        api_level = 24
         cmake_specific_option = [
               "-DCMAKE_CROSSCOMPILING=True",
               "-DLLVM_TABLEGEN=/usr/bin/llvm-tblgen",
               "-DLLVM_DEFAULT_TARGET_TRIPLE=arm-linux-gnueabihf",
               "-DLLVM_TARGET_ARCH=" + arch,
               "-DLLVM_INCLUDE_UTILS=Off",
-              '-DCMAKE_C_FLAGS="-fvisibility=hidden \
-                                -march=' + arm_arch + '\
-                                -mcpu=cortex-a9 \
-                                -I' + ndk_path + '/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi-v7a/include \
-                                -I' + ndk_path + '/sources/cxx-stl/gnu-libstdc++/4.9/include/ \
-                                -I' + ndk_path + '/platforms/android-' + api_level + '/arch-arm/usr/include/ \
-                                -L' + ndk_path + '/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi-v7a/ \
-                                -L' + ndk_path + '/platforms/android-' + api_level + '/arch-arm/usr/lib/ \
-                                -L' + ndk_path + '/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/lib/ \
-                                --sysroot=' + ndk_path + '/platforms/android-' + api_level + '/arch-arm \
-                                -fpie"',
-              '-DCMAKE_CXX_FLAGS="-fvisibility=hidden \
-                                  -march=' + arm_arch + '\
-                                  -mcpu=cortex-a9 \
-                                  -I' + ndk_path + '/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi-v7a/include \
-                                  -I' + ndk_path + '/sources/cxx-stl/gnu-libstdc++/4.9/include/ \
-                                  -I' + ndk_path + '/platforms/android-' + api_level + '/arch-arm/usr/include/ \
-                                  -L' + ndk_path + '/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi-v7a/ \
-                                  -L' + ndk_path + '/platforms/android-' + api_level + '/arch-arm/usr/lib/ \
-                                  -L' + ndk_path + '/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/lib/ \
-                                  --sysroot=' + ndk_path + '/platforms/android-' + api_level + '/arch-arm \
-                                  -lgnustl_shared \
-                                  -fpie"',
-              "-DCMAKE_EXE_LINKER_FLAGS='-fpie -pie'",
-              "-DCMAKE_C_COMPILER=" + ndk_path + "/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/bin/arm-linux-androideabi-gcc",
-              "-DCMAKE_CXX_COMPILER=" + ndk_path + "/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/bin/arm-linux-androideabi-g++",
+              "-DANDROID_PLATFORM=android-{}".format(api_level),
+              "-DANDROID_ABI='armeabi-v7a'",
+              '-DCMAKE_C_FLAGS="-fvisibility=hidden"',
+              '-DCMAKE_CXX_FLAGS="-fvisibility=hidden"',
+              "-DCMAKE_TOOLCHAIN_FILE=/home/romain/android/ndk/build/cmake/android.toolchain.cmake",
         ]
-        # Do we still need export
-        # PATH=$PATH:${NDK_PATH}/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/bin/
-        # with CMAKE_C_COMPILER?
     else:
         cmake_specific_option = ['-DCMAKE_C_FLAGS="-fvisibility=hidden"',
                                  '-DCMAKE_CXX_FLAGS="-fvisibility=hidden"']

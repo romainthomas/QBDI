@@ -38,13 +38,13 @@ class LLVMCPU {
 
 private:
 
+  public:
     std::string                              tripleName;
     std::string                              cpu;
     std::string                              arch;
     std::vector<std::string>                 mattrs;
     const llvm::Target*                      target;
 
-    std::unique_ptr<llvm::MCAsmBackend>      MAB;
     std::unique_ptr<llvm::MCAsmInfo>         MAI;
     std::unique_ptr<llvm::MCCodeEmitter>     MCE;
     std::unique_ptr<llvm::MCContext>         MCTX;
@@ -53,8 +53,7 @@ private:
     std::unique_ptr<llvm::MCRegisterInfo>    MRI;
     std::unique_ptr<llvm::MCSubtargetInfo>   MSTI;
 
-public:
-
+    std::unique_ptr<llvm::MCAsmBackend>      MAB;
     LLVMCPU(const std::string& cpu = "", const std::string& arch = "", const std::vector<std::string>& mattrs = {});
 
     const llvm::Target*        getTarget() { return target;     }
@@ -70,9 +69,9 @@ public:
     llvm::MCInstrInfo*         getMII()    { return MII.get();  }
 
     llvm::MCObjectFileInfo*    getMOFI()   { return MOFI.get(); }
-    
-    llvm::MCRegisterInfo*      getMRI()    { return MRI.get();  } 
-    
+
+    llvm::MCRegisterInfo*      getMRI()    { return MRI.get();  }
+
     llvm::MCSubtargetInfo*     getMSTI()   { return MSTI.get(); }
 };
 

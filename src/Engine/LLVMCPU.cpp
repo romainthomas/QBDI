@@ -76,7 +76,7 @@ LLVMCPU::LLVMCPU(const std::string& _cpu, const std::string& _arch, const std::v
         new llvm::MCContext(MAI.get(), MRI.get(), MOFI.get())
     );
 
-    MOFI->InitMCObjectFileInfo(processTriple, llvm::Reloc::Static, llvm::CodeModel::Default, *MCTX);
+    MOFI->InitMCObjectFileInfo(processTriple, false, *MCTX);
 
     MII = std::unique_ptr<llvm::MCInstrInfo>(
         target->createMCInstrInfo()
@@ -86,7 +86,7 @@ LLVMCPU::LLVMCPU(const std::string& _cpu, const std::string& _arch, const std::v
     );
     LogDebug("LLVMCPU::LLVMCPU", "Initialized LLVM subtarget with cpu %s and features %s", cpu.c_str(), featuresStr.c_str());
     MAB = std::unique_ptr<llvm::MCAsmBackend>(
-        target->createMCAsmBackend(*MRI, tripleName, cpu, llvm::MCTargetOptions())
+        target->createMCAsmBackend(*MSTI, *MRI, llvm::MCTargetOptions())
     );
     MCE = std::unique_ptr<llvm::MCCodeEmitter>(
         target->createMCCodeEmitter(*MII, *MRI, *MCTX)
