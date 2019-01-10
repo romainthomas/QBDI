@@ -18,14 +18,13 @@ case "$1" in
         rm -rf build
         mkdir build
         cd build
-        export NDK_PATH=${HOME}/android-ndk-r13b
-        export PATH=$PATH:${NDK_PATH}/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/bin/
-        export CC=arm-linux-androideabi-gcc
-        export CXX=arm-linux-androideabi-g++
-        export API_LEVEL=23
         cmake  -G Ninja "../llvm-"$VERSION".src" \
               -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_CROSSCOMPILING=True \
+              -DANDROID_ABI="armeabi-v7a" \
+              -DANDROID_PLATFORM=android-24 \
+              -DPLATFORM=android-ARM \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_TOOLCHAIN_FILE=/home/romain/android/ndk/build/cmake/android.toolchain.cmake \
               -DCMAKE_INSTALL_PREFIX=./builded \
               -DLLVM_TABLEGEN=/usr/bin/llvm-tblgen \
               -DLLVM_DEFAULT_TARGET_TRIPLE=arm-linux-gnueabihf \
@@ -34,21 +33,18 @@ case "$1" in
               -DLLVM_BUILD_TOOLS=Off \
               -DLLVM_BUILD_TESTS=Off \
               -DLLVM_INCLUDE_UTILS=Off \
-              -DLLVM_INCLUDE_TESTS=Off \
-              -DCMAKE_C_FLAGS="-fvisibility=hidden -march=armv7-a -mcpu=cortex-a9 -I${NDK_PATH}/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi-v7a/include -I${NDK_PATH}/sources/cxx-stl/gnu-libstdc++/4.9/include/ -I${NDK_PATH}/platforms/android-${API_LEVEL}/arch-arm/usr/include/ -L${NDK_PATH}/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi-v7a/ -L${NDK_PATH}/platforms/android-${API_LEVEL}/arch-arm/usr/lib/ -L${NDK_PATH}/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/lib/ --sysroot=${NDK_PATH}/platforms/android-${API_LEVEL}/arch-arm -fpie" \
-              -DCMAKE_CXX_FLAGS="-fvisibility=hidden -march=armv7-a -mcpu=cortex-a9 -I${NDK_PATH}/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi-v7a/include -I${NDK_PATH}/sources/cxx-stl/gnu-libstdc++/4.9/include/ -I${NDK_PATH}/platforms/android-${API_LEVEL}/arch-arm/usr/include/ -L${NDK_PATH}/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi-v7a/ -L${NDK_PATH}/platforms/android-${API_LEVEL}/arch-arm/usr/lib/ -L${NDK_PATH}/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/lib/ --sysroot=${NDK_PATH}/platforms/android-${API_LEVEL}/arch-arm -lgnustl_shared -fpie" \
-              -DCMAKE_EXE_LINKER_FLAGS='-fpie -pie'
+              -DLLVM_INCLUDE_TESTS=Off
         ninja
     ;;
     package)
         rm -rf lib
         rm -rf include
-        for f in $(find llvm-${VERSION}.src/include/ -iregex '.*\.\(h\|def\)'); do 
+        for f in $(find llvm-${VERSION}.src/include/ -iregex '.*\.\(h\|def\)'); do
             nf=${f#*/}
             mkdir -p ${nf%/*}
             cp $f $nf
         done
-        for f in $(find build/include/ -iregex '.*\.\(h\|def\|gen\)'); do 
+        for f in $(find build/include/ -iregex '.*\.\(h\|def\|gen\)'); do
             nf=${f#*/}
             mkdir -p ${nf%/*}
             cp $f $nf
@@ -59,7 +55,7 @@ case "$1" in
         done
         cp build/lib/libLLVM${TARGET}* lib/
         cp build/lib/Target/${TARGET}/*.inc lib/Target/${TARGET}/
-        for f in $(find llvm-${VERSION}.src/lib/Target/${TARGET}/ -iregex '.*\.\(h\|def\)'); do 
+        for f in $(find llvm-${VERSION}.src/lib/Target/${TARGET}/ -iregex '.*\.\(h\|def\)'); do
             nf=${f#*/}
             mkdir -p ${nf%/*}
             cp $f $nf

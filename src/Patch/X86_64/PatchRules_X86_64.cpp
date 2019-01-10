@@ -28,8 +28,8 @@ RelocatableInst::SharedPtrVec getExecBlockPrologue() {
 
 
     // Save host RBP, RSP
-    append(prologue, SaveReg(Reg(REG_BP), Offset(offsetof(Context, hostState.rbp))).generate((CPUMode) 0));
-    append(prologue, SaveReg(Reg(REG_SP), Offset(offsetof(Context, hostState.rsp))).generate((CPUMode) 0));
+    append(prologue, SaveReg(Reg(REG_BP), Offset(offsetof(Context, hostState.bp))).generate((CPUMode) 0));
+    append(prologue, SaveReg(Reg(REG_SP), Offset(offsetof(Context, hostState.sp))).generate((CPUMode) 0));
     // Restore FPR
 #ifndef _QBDI_ASAN_ENABLED_ // Disabled if ASAN is enabled as it breaks context alignment
     prologue.push_back(Fxrstor(Offset(offsetof(Context, fprState))));
@@ -100,8 +100,8 @@ RelocatableInst::SharedPtrVec getExecBlockEpilogue() {
     }
 #endif
     // Restore host RBP, RSP
-    append(epilogue, LoadReg(Reg(REG_BP), Offset(offsetof(Context, hostState.rbp))).generate((CPUMode) 0));
-    append(epilogue, LoadReg(Reg(REG_SP), Offset(offsetof(Context, hostState.rsp))).generate((CPUMode) 0));
+    append(epilogue, LoadReg(Reg(REG_BP), Offset(offsetof(Context, hostState.bp))).generate((CPUMode) 0));
+    append(epilogue, LoadReg(Reg(REG_SP), Offset(offsetof(Context, hostState.sp))).generate((CPUMode) 0));
     // Save EFLAGS
     epilogue.push_back(Pushf());
     epilogue.push_back(Popr(Reg(0)));
