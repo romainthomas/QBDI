@@ -33,3 +33,15 @@ add_signature(cryptolock_cpp)
 add_executable(cryptolock_c cryptolock.c)
 target_link_libraries(cryptolock_c QBDI)
 add_signature(cryptolock_c)
+
+set_property(TARGET fibonacci_cpp APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-rpath=/data/local/tmp")
+
+add_custom_target(push-fibo
+  COMMAND
+    adb push $<TARGET_FILE:fibonacci_c> /data/local/tmp
+  COMMAND
+    adb push $<TARGET_FILE:fibonacci_cpp> /data/local/tmp
+  COMMAND
+    adb push $<TARGET_FILE:QBDI> /data/local/tmp
+  DEPENDS QBDI fibonacci_c fibonacci_cpp)
+

@@ -19,7 +19,7 @@
 
 namespace QBDI {
 
-/*! Output a list of PatchGenerator which would set up the host state part of the context for 
+/*! Output a list of PatchGenerator which would set up the host state part of the context for
  *  a callback.
  *
  * @param[in] cbk   The callback function to call.
@@ -29,17 +29,20 @@ namespace QBDI {
  *
 */
 PatchGenerator::SharedPtrVec getCallbackGenerator(InstCallback cbk, void* data) {
-    PatchGenerator::SharedPtrVec callbackGenerator;
+    PatchGenerator::SharedPtrVec callbackGenerator {
 
-    // Write callback address in host state
-    callbackGenerator.push_back(GetConstant(Temp(0), Constant((rword) cbk)));
-    callbackGenerator.push_back(WriteTemp(Temp(0), Offset(offsetof(Context, hostState.callback))));
-    // Write callback data pointer in host state
-    callbackGenerator.push_back(GetConstant(Temp(0), Constant((rword) data)));
-    callbackGenerator.push_back(WriteTemp(Temp(0), Offset(offsetof(Context, hostState.data))));
-    // Write internal instruction id of a callback
-    callbackGenerator.push_back(GetInstId(Temp(0)));
-    callbackGenerator.push_back(WriteTemp(Temp(0), Offset(offsetof(Context, hostState.origin))));
+      // Write callback address in host state
+      GetConstant(Temp(0), Constant(reinterpret_cast<rword>(cbk))),
+      WriteTemp(Temp(0), Offset(offsetof(Context, hostState.callback))),
+
+      // Write callback data pointer in host state
+      GetConstant(Temp(0), Constant(reinterpret_cast<rword>(data))),
+      WriteTemp(Temp(0), Offset(offsetof(Context, hostState.data))),
+
+      // Write internal instruction id of a callback
+      GetInstId(Temp(0)),
+      WriteTemp(Temp(0), Offset(offsetof(Context, hostState.origin)))
+    };
 
     return callbackGenerator;
 }

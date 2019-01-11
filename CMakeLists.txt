@@ -16,8 +16,8 @@ include(CMakeFindBinUtils)
 include(cmake/libutils.cmake)
 
 # Process the DEBUG variable
-
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+option(QBDI_DEBUG "Enable QBDI Debug" OFF)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR ${QBDI_DEBUG})
     message(STATUS "Compiling with QBDI_DEBUG")
     add_definitions(-D_QBDI_DEBUG)
 endif()
@@ -440,7 +440,7 @@ endif()
 
 
 # Add tests
-#add_subdirectory(test)
+add_subdirectory(test)
 
 # Add tools
 add_subdirectory(tools)

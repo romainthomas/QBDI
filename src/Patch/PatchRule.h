@@ -44,7 +44,7 @@ class PatchRule : public AutoAlloc<PatchRule, PatchRule> {
     PatchCondition::SharedPtr     condition;
     PatchGenerator::SharedPtrVec  generators;
 
-public:
+  public:
 
     using SharedPtr    = std::shared_ptr<PatchRule>;
     using SharedPtrVec = std::vector<std::shared_ptr<PatchRule>>;
@@ -78,7 +78,7 @@ public:
      * @param[in] address   The current instruction address.
      * @param[in] instSize  The current instruction size.
      * @param[in] llvmCPU   The LLVM CPU instance
-     * @param[in] toMerge   An eventual previous patch which is to be merged with the current 
+     * @param[in] toMerge   An eventual previous patch which is to be merged with the current
      *                      instruction.
      *
      * @return A Patch which is composed of the input context and a series of RelocatableInst.

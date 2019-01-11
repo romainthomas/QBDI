@@ -177,7 +177,7 @@ std::vector<Patch> Engine::patch(rword start) {
     LogDebug("Engine::patch", "Patching basic block at address 0x%" PRIRWORD, start);
 
     // Get Basic block
-    while(basicBlockEnd == false) {
+    while (not basicBlockEnd) {
         llvm::MCInst                        inst;
         llvm::MCDisassembler::DecodeStatus  dstatus;
         rword                               address;
@@ -202,19 +202,23 @@ std::vector<Patch> Engine::patch(rword start) {
                 }
                 fprintf(log, " %s", disass.c_str());
             });
+
             // Patch & merge
-            for(uint32_t j = 0; j < patchRules.size(); j++) {
-                if(patchRules[j]->canBeApplied(&inst, address, instSize, llvmCPU[curCPUMode])) {
-                    LogDebug("Engine::patch", "Patch rule %" PRIu32 " applied", j);
-                    if(patch.insts.size() == 0) {
-                        patch = patchRules[j]->generate(&inst, address, instSize, curCPUMode, llvmCPU[curCPUMode]);
-                    }
-                    else {
-                        LogDebug("Engine::patch", "Previous instruction merged");
-                        patch = patchRules[j]->generate(&inst, address, instSize, curCPUMode, llvmCPU[curCPUMode], &patch);
-                    }
-                    break;
-                }
+            for (size_t j = 0; j < patchRules.size(); j++) {
+              if (not patchRules[j]->canBeApplied(&inst, address, instSize, llvmCPU[curCPUMode])) {
+                // Patch can't be applied, go to the next one
+                continue;
+              }
+              LogDebug("Engine::patch", "Patch rule %" PRIu32 " applied", j);
+
+              if (patch.insts.size() == 0) {
+                patch = patchRules[j]->generate(&inst, address, instSize, curCPUMode, llvmCPU[curCPUMode]);
+              }
+              else {
+                LogDebug("Engine::patch", "Previous instruction merged");
+                patch = patchRules[j]->generate(&inst, address, instSize, curCPUMode, llvmCPU[curCPUMode], &patch);
+              }
+              break;
             }
             i += instSize;
         } while(patch.metadata.merge);
@@ -231,10 +235,10 @@ std::vector<Patch> Engine::patch(rword start) {
     return basicBlock;
 }
 
-void Engine::instrument(std::vector<Patch> &basicBlock) {
+void Engine::instrument(Patch::Vec& basicBlock) {
     LogDebug("Engine::instrument", "Instrumenting basic block [0x%" PRIRWORD ", 0x%" PRIRWORD "]",
              basicBlock.front().metadata.address, basicBlock.back().metadata.address);
-    for(Patch& patch : basicBlock) {
+    for (Patch& patch : basicBlock) {
         LogCallback(LogPriority::DEBUG, "Engine::instrument", [&] (FILE *log) -> void {
             std::string disass;
             llvm::raw_string_ostream disassOs(disass);
@@ -245,10 +249,12 @@ void Engine::instrument(std::vector<Patch> &basicBlock) {
         // Instrument
         for(const auto& item: instrRules) {
             const std::shared_ptr<InstrRule>& rule = item.second;
-            if(rule->canBeApplied(patch, llvmCPU[curCPUMode])) { // Push MCII
-                rule->instrument(patch, llvmCPU[curCPUMode]);
-                LogDebug("Engine::instrument", "Instrumentation rule %" PRIu32 " applied", item.first);
+            if(not rule->canBeApplied(patch, llvmCPU[curCPUMode])) { // Push MCII
+              continue;
             }
+
+            rule->instrument(patch, llvmCPU[curCPUMode]);
+            LogDebug("Engine::instrument", "Instrumentation rule %" PRIu32 " applied", item.first);
         }
     }
 }
@@ -384,6 +390,8 @@ bool Engine::run(rword start, rword stop) {
 
 uint32_t Engine::addInstrRule(InstrRule rule) {
     uint32_t id = instrRulesCounter++;
+
+    LogDebug("Engine::addInstrRule", "New InstrRule");
     RequireAction("Engine::addInstrRule", id < EVENTID_VM_MASK, return VMError::INVALID_EVENTID);
     blockManager->clearCache(rule.affectedRange());
     switch(rule.getPosition()) {

@@ -64,7 +64,7 @@ struct CallbackRegistration {
 };
 
 class Engine {
-private:
+  private:
 
     VMInstanceRef                                                   vminstance;
     LLVMCPU*                                                        llvmCPU[CPUMode::COUNT];
@@ -93,7 +93,7 @@ private:
 
     void signalEvent(VMEvent kind, rword currentBasicBlock, GPRState *gprState, FPRState *fprState);
 
-public:
+  public:
 
     /*! Construct a new Engine for a given CPU with specific attributes
      *

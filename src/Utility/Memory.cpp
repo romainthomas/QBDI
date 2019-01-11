@@ -69,7 +69,7 @@ std::vector<MemoryMap> getRemoteProcessMaps(QBDI::rword pid) {
             *ptr = '\0';
         }
         ptr = line;
-        LogDebug("getRemoteProcessMaps", "Parsing line: %s", line);
+        //LogDebug("getRemoteProcessMaps", "Parsing line: %s", line);
 
         // Read range
         m.range.start = strtoul(ptr, &ptr, 16);
@@ -120,12 +120,12 @@ std::vector<MemoryMap> getRemoteProcessMaps(QBDI::rword pid) {
             m.name = std::string("");
         }
 
-        LogCallback(LogPriority::DEBUG, "getRemoteProcessMaps", [&] (FILE *out) -> void {
-            fprintf(out, "Read new map [%" PRIRWORD ", %" PRIRWORD "] %s ", m.range.start, m.range.end, m.name.c_str());
-            if(m.permission & QBDI::PF_READ)  fprintf(out, "r");
-            if(m.permission & QBDI::PF_WRITE) fprintf(out, "w");
-            if(m.permission & QBDI::PF_EXEC)  fprintf(out, "x");
-        });
+        //LogCallback(LogPriority::DEBUG, "getRemoteProcessMaps", [&] (FILE *out) -> void {
+        //    fprintf(out, "Read new map [%" PRIRWORD ", %" PRIRWORD "] %s ", m.range.start, m.range.end, m.name.c_str());
+        //    if(m.permission & QBDI::PF_READ)  fprintf(out, "r");
+        //    if(m.permission & QBDI::PF_WRITE) fprintf(out, "w");
+        //    if(m.permission & QBDI::PF_EXEC)  fprintf(out, "x");
+        //});
         maps.push_back(m);
     }
     fclose(mapfile);

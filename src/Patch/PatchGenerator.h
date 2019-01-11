@@ -32,8 +32,7 @@
 namespace QBDI {
 
 class PatchGenerator {
-public:
-
+  public:
     using SharedPtr    = std::shared_ptr<PatchGenerator>;
     using SharedPtrVec = std::vector<std::shared_ptr<PatchGenerator>>;
 
@@ -47,11 +46,10 @@ public:
     virtual bool doNotInstrument() { return false; }
 };
 
-class ModifyInstruction : public PatchGenerator, public AutoAlloc<PatchGenerator, ModifyInstruction>
-{
+class ModifyInstruction : public PatchGenerator, public AutoAlloc<PatchGenerator, ModifyInstruction> {
     InstTransform::SharedPtrVec transforms;
 
-public:
+  public:
 
     /*! Apply a list of InstTransform to the current instruction and output the result.
      *
@@ -80,8 +78,7 @@ public:
     }
 };
 
-class DoNotInstrument : public PatchGenerator, public AutoAlloc<PatchGenerator, DoNotInstrument>
-{
+class DoNotInstrument : public PatchGenerator, public AutoAlloc<PatchGenerator, DoNotInstrument> {
 
 public:
 

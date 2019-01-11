@@ -26,7 +26,7 @@ InMemoryObject ComparedExecutor_ARM::compileWithContextSwitch(const char* source
     finalSource << "push {lr}\n";
     finalSource << "push {r7}\n"; // can't trust globbers for ARM frame pointer
     for(uint32_t i = 0; i < QBDI_NUM_FPR; i++) {
-        finalSource << "vldr s" << i << ", [r1, #" << 
+        finalSource << "vldr s" << i << ", [r1, #" <<
                       offsetof(QBDI::Context, fprState) + i*sizeof(float) << "]\n";
     }
     finalSource << "ldr r0, [r1, #" << offsetof(QBDI::Context, gprState.cpsr) << "]\n"
@@ -68,7 +68,7 @@ InMemoryObject ComparedExecutor_ARM::compileWithContextSwitch(const char* source
                    "ldr fp, [r1, #" << offsetof(QBDI::Context, hostState.fp) << "]\n"
                    "ldr sp, [r1, #" << offsetof(QBDI::Context, hostState.sp) << "]\n";
     for(uint32_t i = 0; i < QBDI_NUM_FPR; i++) {
-        finalSource << "vstr s" << i << ", [r1, #" << 
+        finalSource << "vstr s" << i << ", [r1, #" <<
                     offsetof(QBDI::Context, fprState) + i*sizeof(float) << "]\n";
     }
     finalSource << "pop {r7}\n";
@@ -77,7 +77,7 @@ InMemoryObject ComparedExecutor_ARM::compileWithContextSwitch(const char* source
     return InMemoryObject(finalSource.str().c_str(), CPU, MATTRS);
 }
 
-QBDI::Context ComparedExecutor_ARM::jitExec(llvm::ArrayRef<uint8_t> code, QBDI::Context &inputState, 
+QBDI::Context ComparedExecutor_ARM::jitExec(llvm::ArrayRef<uint8_t> code, QBDI::Context &inputState,
                        llvm::sys::MemoryBlock &stack) {
     QBDI::Context           outputState;
     QBDI::Context           outerState;
@@ -85,9 +85,9 @@ QBDI::Context ComparedExecutor_ARM::jitExec(llvm::ArrayRef<uint8_t> code, QBDI::
     llvm::sys::MemoryBlock  outerStack;
     std::error_code         ec;
 
-    ctxBlock = llvm::sys::Memory::allocateMappedMemory(4096, nullptr, 
+    ctxBlock = llvm::sys::Memory::allocateMappedMemory(4096, nullptr,
                                                        PF::MF_READ | PF::MF_WRITE, ec);
-    outerStack = llvm::sys::Memory::allocateMappedMemory(4096, nullptr, 
+    outerStack = llvm::sys::Memory::allocateMappedMemory(4096, nullptr,
                                                          PF::MF_READ | PF::MF_WRITE, ec);
     memset((void*)&outerState, 0, sizeof(QBDI::Context));
     // Put the inputState on the stack
@@ -115,15 +115,15 @@ QBDI::Context ComparedExecutor_ARM::jitExec(llvm::ArrayRef<uint8_t> code, QBDI::
     return outputState;
 }
 
-QBDI::Context ComparedExecutor_ARM::realExec(llvm::ArrayRef<uint8_t> code, 
-                                                    QBDI::Context &inputState, 
+QBDI::Context ComparedExecutor_ARM::realExec(llvm::ArrayRef<uint8_t> code,
+                                                    QBDI::Context &inputState,
                                                     llvm::sys::MemoryBlock &stack) {
 
     QBDI::Context           outputState;
     std::error_code         ec;
     llvm::sys::MemoryBlock  ctxBlock;
 
-    ctxBlock = llvm::sys::Memory::allocateMappedMemory(4096, nullptr, 
+    ctxBlock = llvm::sys::Memory::allocateMappedMemory(4096, nullptr,
                                                        PF::MF_READ | PF::MF_WRITE, ec);
 
     // Put the inputState on the stack
@@ -140,7 +140,8 @@ QBDI::Context ComparedExecutor_ARM::realExec(llvm::ArrayRef<uint8_t> code,
         "blx %0;"
         :
         :"r"(code.data()), "m" (ctxBlockPtr)
-        :"r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r12"
+        //: "r1"
+        :"r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r12"
     );
     // Get the output context
     memcpy((void*) &outputState, ctxBlock.base(), sizeof(QBDI::Context));

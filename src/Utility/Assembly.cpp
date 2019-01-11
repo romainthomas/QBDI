@@ -103,13 +103,13 @@ void Assembly::writeInstruction(const llvm::MCInst inst, memory_ostream *stream)
         }
     }
 
-    LogCallback(LogPriority::DEBUG, "Assembly::writeInstruction", [&] (FILE *log) -> void {
-        fprintf(log, "Assembly result at 0x%" PRIRWORD " is:", (rword) stream->get_ptr() + (rword) pos);
-        uint8_t* ptr = (uint8_t*) stream->get_ptr();
-        for(uint32_t i = 0; i < size; i++) {
-            fprintf(log, " %02" PRIx8, ptr[pos + i]);
-        }
-    });
+    //LogCallback(LogPriority::DEBUG, "Assembly::writeInstruction", [&] (FILE *log) -> void {
+    //    fprintf(log, "Assembly result at 0x%" PRIRWORD " is:", (rword) stream->get_ptr() + (rword) pos);
+    //    uint8_t* ptr = (uint8_t*) stream->get_ptr();
+    //    for(uint32_t i = 0; i < size; i++) {
+    //        fprintf(log, " %02" PRIx8, ptr[pos + i]);
+    //    }
+    //});
 }
 
 

@@ -34,7 +34,7 @@ TEST_F(Instr_ARMTest, GPRSave_IC) {
     vm.addCodeCB(QBDI::POSTINST, increment, (void*) &count2);
 
     comparedExec(GPRSave_s, inputState, 4096);
-    
+
     ASSERT_LT((uint64_t) 0, count1);
     ASSERT_EQ(count1, count2);
 

@@ -26,6 +26,7 @@
 namespace QBDI {
 
 // Low level layer 2
+llvm::MCInst ldri12(unsigned int reg, unsigned int base, rword offset);
 
 llvm::MCInst adr(unsigned int reg, rword offset);
 
@@ -76,6 +77,8 @@ RelocatableInst::SharedPtr Mrs(Reg reg);
 RelocatableInst::SharedPtr Popr(Reg reg);
 
 RelocatableInst::SharedPtr Pushr(Reg reg);
+
+RelocatableInst::SharedPtr BreakPoint(CPUMode cpuMode);
 }
 
 #endif

@@ -32,16 +32,16 @@ class GetOperand : public PatchGenerator, public AutoAlloc<PatchGenerator, GetOp
 
 public:
 
-    /*! Obtain the value of the operand op and copy it's value in a temporary. If op is an immediate 
+    /*! Obtain the value of the operand op and copy it's value in a temporary. If op is an immediate
      * the immediate value is copied, if op is a register the register value is copied.
-     * 
+     *
      * @param[in] temp   A temporary where the value will be copied.
-     * @param[in] op     The operand index (relative to the instruction LLVM MCInst representation) 
+     * @param[in] op     The operand index (relative to the instruction LLVM MCInst representation)
      *                   to be copied.
     */
     GetOperand(Temp temp, Operand op): temp(temp), op(op) {}
 
-    /*! 
+    /*!
      * Output:
      *   MOV REG64 temp, IMM64/REG64 op
     */
@@ -101,7 +101,7 @@ class GetPCOffset : public PatchGenerator, public AutoAlloc<PatchGenerator, GetP
 
 public:
 
-    /*! Interpret a constant as a RIP relative offset and copy it in a temporary. It can be used to 
+    /*! Interpret a constant as a RIP relative offset and copy it in a temporary. It can be used to
      * obtain the current value of RIP by using a constant of 0.
      *
      * @param[in] temp     A temporary where the value will be copied.
@@ -109,11 +109,11 @@ public:
     */
     GetPCOffset(Temp temp, Constant cst): temp(temp), cst(cst), op(0), type(ConstantType) {}
 
-    /*! Interpret an operand as a RIP relative offset and copy it in a temporary. It can be used to 
+    /*! Interpret an operand as a RIP relative offset and copy it in a temporary. It can be used to
      * obtain jump/call targets or relative memory access addresses.
      *
      * @param[in] temp     A temporary where the value will be copied.
-     * @param[in] op       The  operand index (relative to the instruction LLVM MCInst 
+     * @param[in] op       The  operand index (relative to the instruction LLVM MCInst
      *                     representation) to be used.
     */
     GetPCOffset(Temp temp, Operand op): temp(temp), cst(0), op(op), type(OperandType) {}
@@ -148,9 +148,9 @@ class GetReadAddress : public PatchGenerator, public AutoAlloc<PatchGenerator, G
     Temp temp;
 
 public:
-    
-    /*! Resolve the memory address where the instructions will read its value and copy the address in a 
-     * temporary. This PatchGenerator is only guaranteed to work before the instruction has been 
+
+    /*! Resolve the memory address where the instructions will read its value and copy the address in a
+     * temporary. This PatchGenerator is only guaranteed to work before the instruction has been
      * executed.
      *
      * @param[in] temp   A temporary where the memory address will be copied.
@@ -161,7 +161,7 @@ public:
      *
      * if stack access:
      * MOV REG64 temp, REG64 RSP
-     * 
+     *
      * else:
      * LEA REG64 temp, MEM64 addr
     */
@@ -223,9 +223,9 @@ class GetWriteAddress : public PatchGenerator, public AutoAlloc<PatchGenerator, 
     Temp temp;
 
 public:
-    
-    /*! Resolve the memory address where the instructions will write its value and copy the address in a 
-     * temporary. This PatchGenerator is only guaranteed to work before the instruction has been 
+
+    /*! Resolve the memory address where the instructions will write its value and copy the address in a
+     * temporary. This PatchGenerator is only guaranteed to work before the instruction has been
      * executed.
      *
      * @param[in] temp   A temporary where the memory address will be copied.
@@ -236,7 +236,7 @@ public:
      *
      * if stack access:
      * MOV REG64 temp, REG64 RSP
-     * 
+     *
      * else:
      * LEA REG64 temp, MEM64 addr
     */
@@ -294,19 +294,19 @@ public:
 };
 
 class GetReadValue : public PatchGenerator, public AutoAlloc<PatchGenerator, GetReadValue> {
- 
+
     Temp temp;
- 
+
  public:
-     
-    /*! Resolve the memory address where the instructions will read its value and copy the value in a 
-     * temporary. This PatchGenerator is only guaranteed to work before the instruction has been 
+
+    /*! Resolve the memory address where the instructions will read its value and copy the value in a
+     * temporary. This PatchGenerator is only guaranteed to work before the instruction has been
      * executed.
      *
      * @param[in] temp   A temporary where the memory value will be copied.
     */
     GetReadValue(Temp temp) : temp(temp) {}
- 
+
     /*! Output:
      *
      * MOV REG64 temp, MEM64 val
@@ -364,7 +364,7 @@ class GetReadValue : public PatchGenerator, public AutoAlloc<PatchGenerator, Get
                         else if(size == 1) {
                             readinst = mov32rm8(dst, base, scale, offset, displacement, seg);
                         }
-         
+
                         if(inst->getOperand(i + 0).getReg() == Reg(REG_PC)) {
                             return {
                                 Mov(
@@ -389,13 +389,13 @@ class GetReadValue : public PatchGenerator, public AutoAlloc<PatchGenerator, Get
 };
 
 class GetWriteValue : public PatchGenerator, public AutoAlloc<PatchGenerator, GetWriteValue> {
- 
+
     Temp temp;
- 
+
 public:
-     
-    /*! Resolve the memory address where the instructions has written its value and copy back the value 
-     * in a temporary. This PatchGenerator is only guaranteed to work after the instruction has been 
+
+    /*! Resolve the memory address where the instructions has written its value and copy back the value
+     * in a temporary. This PatchGenerator is only guaranteed to work after the instruction has been
      * executed.
      *
      * @param[in] temp   A temporary where the memory value will be copied.
@@ -460,7 +460,7 @@ public:
                         else if(size == 1) {
                             readinst = mov32rm8(dst, base, scale, offset, displacement, seg);
                         }
-         
+
                         if(inst->getOperand(i + 0).getReg() == Reg(REG_PC)) {
                             return {
                                 Mov(
@@ -489,7 +489,7 @@ class CopyReg : public PatchGenerator, public AutoAlloc<PatchGenerator, CopyReg>
     Reg src;
 
 public:
-    
+
     /*! Copy a register in a temporary.
      *
      * @param[in] dst    A temporary where the register will be copied.
@@ -572,7 +572,7 @@ public:
     */
     RelocatableInst::SharedPtrVec generate(const llvm::MCInst *inst, rword address, rword instSize,
         CPUMode cpuMode, TempManager *temp_manager, const Patch *toMerge) {
-        
+
         if(type == OffsetType) {
             return {Mov(offset, temp_manager->getRegForTemp(temp))};
         }

@@ -460,4 +460,15 @@ RelocatableInst::SharedPtr Pushr(Reg reg) {
     return NoReloc(inst);
 }
 
+
+RelocatableInst::SharedPtr BreakPoint(CPUMode cpuMode) {
+  //TODO: Thumb Mode
+  llvm::MCInst inst;
+
+  inst.setOpcode(llvm::ARM::BKPT);
+  inst.addOperand(llvm::MCOperand::createImm(0));
+
+  return NoReloc(inst);
+}
+
 }

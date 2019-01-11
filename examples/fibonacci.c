@@ -8,7 +8,6 @@
 
 #define FAKE_RET_ADDR 42
 
-
 int fibonacci(int n) {
     if(n <= 2)
         return 1;
@@ -19,7 +18,7 @@ VMAction countRecursion(VMInstanceRef vm, GPRState *gprState, FPRState *fprState
     *((unsigned*) data) += 1;
     return QBDI_CONTINUE;
 }
-    
+
 VMAction countInstruction(VMInstanceRef vm, GPRState *gprState, FPRState *fprState, void *data) {
     // Cast data to our counter
     uint32_t* counter = (uint32_t *) data;
@@ -66,6 +65,9 @@ int main(int argc, char **argv) {
     printf("Running fibonacci(%d) ...\n", n);
     // Running DBI execution
     qbdi_instrumentAllExecutableMaps(vm);
+    //qbdi_addLogFilter("*", QBDI_DEBUG);
+
+
     qbdi_run(vm, (rword) fibonacci, (rword) FAKE_RET_ADDR);
     printf("fibonnaci ran in %u instructions, recursed %u times and returned %d\n",
             counter, recursions - 1, (int) QBDI_GPR_GET(state, REG_RETURN));

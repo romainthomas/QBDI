@@ -40,6 +40,12 @@ find_library(GTEST gtest PATHS
     "${CMAKE_CURRENT_SOURCE_DIR}/../deps/gtest/${PLATFORM}/lib"
     NO_DEFAULT_PATH)
 
+if(${PLATFORM} STREQUAL "android-ARM")
+  set(GTEST
+    /home/romain/dev/quarkslab/QBDI/branches/master/deps/gtest/android-ARM/lib/libgtest.a
+    /home/romain/dev/quarkslab/QBDI/branches/master/deps/gtest/android-ARM/lib/libgtest_main.a
+  )
+endif()
 target_link_libraries(QBDITest
     QBDI_static
     ${GTEST}

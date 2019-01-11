@@ -31,13 +31,13 @@ class GetOperand : public PatchGenerator, public AutoAlloc<PatchGenerator, GetOp
     Temp temp;
     Operand op;
 
-public:
+  public:
 
-    /*! Obtain the value of the operand op and copy it's value in a temporary. If op is an immediate 
+    /*! Obtain the value of the operand op and copy it's value in a temporary. If op is an immediate
      * the immediate value is copied, if op is a register the register value is copied.
-     * 
+     *
      * @param[in] temp   A temporary where the value will be copied.
-     * @param[in] op     The operand index (relative to the instruction LLVM MCInst representation) 
+     * @param[in] op     The operand index (relative to the instruction LLVM MCInst representation)
      *                   to be copied.
     */
     GetOperand(Temp temp, Operand op): temp(temp), op(op) {}
@@ -52,7 +52,7 @@ public:
         CPUMode cpuMode, TempManager *temp_manager, const Patch *toMerge) {
 
         if(inst->getOperand(op).isImm()) {
-            return {Ldr(cpuMode, temp_manager->getRegForTemp(temp), 
+            return {Ldr(cpuMode, temp_manager->getRegForTemp(temp),
                        Constant(inst->getOperand(op).getImm()))
             };
         }
@@ -71,7 +71,7 @@ class GetConstant : public PatchGenerator, public AutoAlloc<PatchGenerator, GetC
     Temp temp;
     Constant cst;
 
-public:
+  public:
 
     /*! Copy a constant in a temporary.
      *
@@ -86,11 +86,11 @@ public:
     */
     RelocatableInst::SharedPtrVec generate(const llvm::MCInst *inst, rword address, rword instSize,
         CPUMode cpuMode, TempManager *temp_manager, const Patch *toMerge) {
-        if(cst < (2<<16)) {
-            return{Mov(cpuMode, temp_manager->getRegForTemp(temp), Constant(cst))};
+        if(cst < (2 << 16)) {
+            return {Mov(cpuMode, temp_manager->getRegForTemp(temp), Constant(cst))};
         }
         else {
-            return{Ldr(cpuMode, temp_manager->getRegForTemp(temp), Constant(cst))};
+            return {Ldr(cpuMode, temp_manager->getRegForTemp(temp), Constant(cst))};
         }
     }
 };
@@ -105,9 +105,9 @@ class GetPCOffset : public PatchGenerator, public AutoAlloc<PatchGenerator, GetP
         OperandType,
     } type;
 
-public:
+  public:
 
-    /*! Interpret a constant as a PC relative offset and copy it in a temporary. It can be used to 
+    /*! Interpret a constant as a PC relative offset and copy it in a temporary. It can be used to
      * obtain the current value of PC by using a constant of 0.
      *
      * @param[in] temp     A temporary where the value will be copied.
@@ -115,11 +115,11 @@ public:
     */
     GetPCOffset(Temp temp, Constant cst): temp(temp), cst(cst), op(0), type(ConstantType) {}
 
-    /*! Interpret an operand as a PC relative offset and copy it in a temporary. It can be used to 
+    /*! Interpret an operand as a PC relative offset and copy it in a temporary. It can be used to
      * obtain jump/call targets or relative memory access addresses.
      *
      * @param[in] temp     A temporary where the value will be copied.
-     * @param[in] op       The  operand index (relative to the instruction LLVM MCInst 
+     * @param[in] op       The  operand index (relative to the instruction LLVM MCInst
      *                     representation) to be used.
     */
     GetPCOffset(Temp temp, Operand op): temp(temp), cst(0), op(op), type(OperandType) {}
@@ -143,13 +143,13 @@ public:
         rword pcoffset = cpuMode == CPUMode::ARM ? 8 : 4;
 
         if(type == ConstantType) {
-            return{Ldr(cpuMode, temp_manager->getRegForTemp(temp), Constant(address + pcoffset + cst))};
+            return {Ldr(cpuMode, temp_manager->getRegForTemp(temp), Constant(address + pcoffset + cst))};
         }
         else if(type == OperandType) {
             if(inst->getOperand(op).isImm()) {
                 return {Ldr(
-                    cpuMode, 
-                    temp_manager->getRegForTemp(temp), 
+                    cpuMode,
+                    temp_manager->getRegForTemp(temp),
                     Constant(address + pcoffset + inst->getOperand(op).getImm()))
                 };
             }
@@ -173,7 +173,7 @@ public:
 class GetInstId : public PatchGenerator, public AutoAlloc<PatchGenerator, GetInstId> {
     Temp temp;
 
-public:
+  public:
 
     /*! Copy an ExecBlock specific id for the current instruction in a temporary. This id is used to
      * identify the instruction responsible for a callback in the engine and is only meant for
@@ -198,7 +198,7 @@ class CopyReg : public PatchGenerator, public AutoAlloc<PatchGenerator, CopyReg>
     Temp  temp;
     Reg reg;
 
-public:
+  public:
 
     /*! Copy a register in a temporary.
      *
@@ -211,7 +211,7 @@ public:
      *
      * MOV REG32 temp, REG32 reg
     */
-    RelocatableInst::SharedPtrVec generate(const llvm::MCInst *inst, rword address, rword instSize, 
+    RelocatableInst::SharedPtrVec generate(const llvm::MCInst *inst, rword address, rword instSize,
         CPUMode cpuMode, TempManager *temp_manager, const Patch *toMerge) {
 
         return {Mov(cpuMode, temp_manager->getRegForTemp(temp), reg)};
@@ -222,7 +222,7 @@ class WriteTemp: public PatchGenerator, public AutoAlloc<PatchGenerator, WriteTe
     Temp  temp;
     Offset offset;
 
-public:
+  public:
 
     /*! Write a temporary value in the data block at the specified offset. This can be used to overwrite
      * register values in the context part of the data block.
@@ -252,7 +252,7 @@ class SaveReg: public PatchGenerator, public AutoAlloc<PatchGenerator, SaveReg> 
     Reg   reg;
     Offset offset;
 
-public:
+  public:
 
     /*! Save a register in the data block at the specified offset. This can be used to save
      * register values in the context part of the data block.
@@ -282,7 +282,7 @@ class LoadReg: public PatchGenerator, public AutoAlloc<PatchGenerator, LoadReg> 
     Reg   reg;
     Offset offset;
 
-public:
+  public:
 
     /*! Load a register from the data block at the specified offset. This can be used to load
      * register values from the context part of the data block.
@@ -309,8 +309,8 @@ public:
 
 class JmpEpilogue : public PatchGenerator, public AutoAlloc<PatchGenerator, JmpEpilogue> {
 
-public:
-    
+  public:
+
     /*! Generate a jump instruction which target the epilogue of the ExecBlock.
     */
     JmpEpilogue() {}
@@ -341,7 +341,7 @@ public:
 class SimulateLink : public PatchGenerator, public AutoAlloc<PatchGenerator, SimulateLink> {
     Temp  temp;
 
-public:
+  public:
 
     /*! Simulate the effects of the link operation performed by BL and BLX instructions: the address of
      * the next instruction is copied into the LR register. A temp and a shadow are needed to
@@ -376,7 +376,7 @@ public:
 class SimulateExchange : public PatchGenerator, public AutoAlloc<PatchGenerator, SimulateExchange> {
     Temp  temp;
 
-public:
+  public:
 
     /*! Simulate the effects of the link operation performed by BL and BLX instructions: the address of
      * the next instruction is copied into the LR register. A temp and a shadow are needed to
@@ -391,7 +391,7 @@ public:
      * LDR REG32 temp, MEM32 Shadow(IMM32 1)
      * STR REG32 temp, MEM32 DSataBlock[Offset(hostState.exchange)]
     */
-    RelocatableInst::SharedPtrVec generate(const llvm::MCInst *inst, rword address, rword instSize, 
+    RelocatableInst::SharedPtrVec generate(const llvm::MCInst *inst, rword address, rword instSize,
         CPUMode cpuMode, TempManager *temp_manager, const Patch *toMerge) {
         RelocatableInst::SharedPtrVec patch;
 
@@ -405,7 +405,7 @@ public:
 class SimulatePopPC : public PatchGenerator, public AutoAlloc<PatchGenerator, SimulatePopPC> {
     Temp  temp;
 
-public:
+  public:
 
     /*! Simulate an (eventually conditional) return instruction (POPcc PC). The conditional code of the
      * current instruction is used by this generator. This generator signals a PC modification and
