@@ -326,8 +326,7 @@ SeqWriteResult ExecBlock::writeSequence(std::vector<Patch>::const_iterator seqIt
         if (cpuMode == CPUMode::Thumb) {
           //assembly[cpuMode]->writeInstruction(BreakPoint(cpuMode)->reloc(this, cpuMode), codeStream);
           rword align = this->getCurrentPC() % 4;
-
-          size_t off = this->getDataBlockOffset() - 4 + align;
+          size_t off  = this->getDataBlockOffset() - 4 + align;
 
           llvm::MCInst inst;
           inst.setOpcode(llvm::ARM::t2ADR);

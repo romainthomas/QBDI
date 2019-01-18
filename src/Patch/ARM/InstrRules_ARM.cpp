@@ -27,12 +27,14 @@ RelocatableInst::SharedPtrVec getBreakToHost(Reg regTmp, CPUMode cpuMode) {
     RelocatableInst::SharedPtrVec breakToHost;
 
     const size_t db_selector_offset = offsetof(Context, hostState.selector);
-    const size_t patchSize = cpuMode == CPUMode::ARM ? 16 : (16 + 1); // +1 For thumb mode
+    const size_t patchSize = cpuMode == CPUMode::ARM ? (16 - 4): (16 + 1); // +1 For thumb mode
     breakToHost = {
+
+      //BreakPoint(cpuMode),
       // Use the temporary register to compute PC + 16 which is the address which will follow this
       // patch and where the execution needs to be resumed:
       // temp = pc + 16
-      Adr(cpuMode, regTmp, patchSize - 4),
+      Adr(cpuMode, regTmp, patchSize),
 
       // Set the selector to this address so the execution can be resumed when the exec block will be
       // reexecuted.

@@ -57,21 +57,21 @@ public:
 
     /*! Set the operand opn of the instruction as the Temp temp.
      *
-     * @param[in] opn   Operand index in the LLVM MCInst representation.    
+     * @param[in] opn   Operand index in the LLVM MCInst representation.
      * @param[in] temp  Temporary register which will be set as the new operand
     */
     SetOperand(Operand opn, Temp temp) : opn(opn), type(TempOperandType), temp(temp), reg(0), imm(0) {}
 
     /*! Set the operand opn of the instruction as the Reg reg.
      *
-     * @param[in] opn  Operand index in the LLVM MCInst representation.    
+     * @param[in] opn  Operand index in the LLVM MCInst representation.
      * @param[in] reg  Register which will be set as the new operand.
     */
     SetOperand(Operand opn, Reg reg) : opn(opn), type(RegOperandType), temp(0), reg(reg), imm(0) {}
 
     /*! Set the operand opn of the instruction as the immediate imm.
      *
-     * @param[in] opn  Operand index in the LLVM MCInst representation.    
+     * @param[in] opn  Operand index in the LLVM MCInst representation.
      * @param[in] imm  Constant which will be set as the new immediate operand.
     */
     SetOperand(Operand opn, Constant imm) : opn(opn), type(ImmOperandType), temp(0), reg(0), imm(imm) {}
@@ -195,7 +195,7 @@ class SetOpcode : public InstTransform, public AutoAlloc<InstTransform, SetOpcod
 
     unsigned int opcode;
 
-public:
+  public:
 
     /*! Set the opcode of the instruction.
      *
@@ -205,6 +205,26 @@ public:
 
     void transform(llvm::MCInst &inst, rword address, size_t instSize, TempManager *temp_manager) {
         inst.setOpcode(opcode);
+    }
+};
+
+//TODO: Rename and Move to ARM
+class TestTransform : public InstTransform, public AutoAlloc<InstTransform, TestTransform> {
+    Temp temp;
+
+  public:
+    TestTransform(Temp tmp) : temp(tmp) {}
+
+    void transform(llvm::MCInst &inst, rword address, size_t instSize, TempManager *temp_manager) {
+      llvm::MCInst newInst;
+      newInst.setOpcode(llvm::ARM::t2LDRi12);
+      newInst.addOperand(inst.getOperand(0));
+      newInst.addOperand(llvm::MCOperand::createReg(temp_manager->getRegForTemp(this->temp)));
+      newInst.addOperand(inst.getOperand(1));
+      newInst.addOperand(llvm::MCOperand::createImm(14));
+      newInst.addOperand(llvm::MCOperand::createReg(0));
+      inst = std::move(newInst);
+
     }
 };
 

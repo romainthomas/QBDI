@@ -425,20 +425,17 @@ PatchRule::SharedPtrVec getDefaultPatchRules() {
      * Patch:   Temp(0) := PC + Constant(0)
      *          LDR REG, [Temp(0), OFF]
     */
-    //rules.push_back(
-    //    PatchRule(
-    //        OpIs(llvm::ARM::tLDRpci),
-    //        {
-    //            GetPCOffset(Temp(0), Constant(0)),
-    //            ModifyInstruction({
-    //                SetOpcode(llvm::ARM::tLDRi),
-    //                AddOperand(Operand(0), XXX),
-    //                AddOperand(Operand(1), Temp(0)),
-    //                AddOperand(Operand(4), Constant(0)),
-    //            }),
-    //        }
-    //    )
-    //);
+    rules.push_back(
+        PatchRule(
+            OpIs(llvm::ARM::tLDRpci),
+            {
+                GetPCOffset(Temp(0), Constant(0)),
+                ModifyInstruction({
+                    TestTransform(Temp(0)),
+                }),
+            }
+        )
+    );
 
 
 
