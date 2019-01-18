@@ -29,8 +29,6 @@ namespace QBDI {
 struct Reg {
     unsigned int id;
 
-  public:
-
     using Vec = std::vector<Reg>;
 
     /*! Create a new register variable.
@@ -56,13 +54,25 @@ struct Reg {
     }
 };
 
+
+/*! Structure representing a scratch register in PatchDSL.
+*/
+struct SReg : public Reg {
+  static constexpr uint8_t ID = static_cast<uint8_t>(-1);
+
+  /*! Create a new register variable.
+   *
+   *  @param[in] id The id of the register to represent.
+  */
+  inline SReg() : Reg{ID} {};
+};
+
+
 /*! Structure representing a shadow variable in PatchDSL.
 */
 struct Shadow {
 
     uint16_t tag;
-
-public:
 
     /*! Allocate a new shadow variable in the data block with the corresponding tag.
      *
@@ -107,8 +117,6 @@ struct Offset {
 
     int64_t offset;
 
-public:
-
     /*! Allocate a new offset variable with its offset value.
      *
      *  @param[in] offset The offset value
@@ -136,8 +144,6 @@ struct Temp {
 
     unsigned int id;
 
-public:
-
     /*! Represent a temporary register variable idenified by a unique ID. Inside a patch rules
      *  or a instrumentation rules, Temp with identical ids point to the same physical register.
      *  The id 0xFFFFFFFF is reserved for internal uses. The mapping from id to physical register
@@ -162,8 +168,6 @@ public:
 struct Operand {
 
     unsigned int idx;
-
-public:
 
     /*! Represent an operand instruction identified by its index in the LLVM MCInst representation
      *  of the instruction.

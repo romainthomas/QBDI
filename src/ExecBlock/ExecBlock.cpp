@@ -48,7 +48,7 @@ RelocatableInst::SharedPtrVec ExecBlock::execBlockPrologue = RelocatableInst::Sh
 RelocatableInst::SharedPtrVec ExecBlock::execBlockEpilogue = RelocatableInst::SharedPtrVec();
 void (*ExecBlock::runCodeBlockFct)(void*) = NULL;
 
-ExecBlock::ExecBlock(Assembly* assembly[CPUMode::COUNT], VMInstanceRef vminstance) : vminstance(vminstance) {
+ExecBlock::ExecBlock(Assembly* assembly[CPUMode::COUNT], VMInstanceRef vminstance) : vminstance{vminstance} {
 
     std::error_code ec;
     // Allocate memory blocks
@@ -70,7 +70,7 @@ ExecBlock::ExecBlock(Assembly* assembly[CPUMode::COUNT], VMInstanceRef vminstanc
     }
 
     // Allocate 2 pages block
-    codeBlock = QBDI::allocateMappedMemory(2*pageSize, nullptr, mflags, ec);
+    codeBlock = QBDI::allocateMappedMemory(2 * pageSize, nullptr, mflags, ec);
     RequireAction("ExecBlock::ExecBlock", codeBlock.base() != nullptr, abort());
 
     // Split it in two blocks
@@ -86,6 +86,10 @@ ExecBlock::ExecBlock(Assembly* assembly[CPUMode::COUNT], VMInstanceRef vminstanc
     currentInst = 0;
     codeStream  = new memory_ostream(codeBlock);
     pageState   = RW;
+
+    #if defined(QBDI_ARCH_ARM)
+      this->scratchRegister = llvm::ARM::R7;
+    #endif
 
     // Epilogue and prologue management.
     // If epilogueSize == 0 then static members are not yet initialized
@@ -147,8 +151,8 @@ void ExecBlock::show() const {
     uint64_t instSize;
     llvm::MCDisassembler::DecodeStatus dstatus;
     llvm::ArrayRef<uint8_t> jitCode((const uint8_t*) codeBlock.base(), codeStream->current_pos());
-
-    const Assembly* assbly = this->assembly[0];
+    size_t mode = 0; // ARM
+    const Assembly* assbly = this->assembly[mode];
 
     fprintf(stderr, "---- JIT CODE ----\n");
     for (size_t i = 0; i < jitCode.size(); i += instSize)
@@ -159,6 +163,10 @@ void ExecBlock::show() const {
 
         // Broken: does not support multi cpu mode
         dstatus = assbly->getInstruction(inst, instSize, jitCode.slice(i), i);
+        if (dstatus == llvm::MCDisassembler::Fail) { // Try to switch mode
+          assbly = this->assembly[mode ^ 1];
+          dstatus = assbly->getInstruction(inst, instSize, jitCode.slice(i), i);
+        }
         RequireAction("ExecBlock::show", dstatus != llvm::MCDisassembler::Fail,
             break
         );
@@ -313,6 +321,35 @@ SeqWriteResult ExecBlock::writeSequence(std::vector<Patch>::const_iterator seqIt
 
         LogDebug("ExecBlock::writeBasicBlock", "Attempting to write patch of %zu RelocatableInst to ExecBlock %p", seqIt->metadata.patchSize, this);
         // Attempt to write a complete patch. If not, rollback to the last complete patch written
+
+        // Fill the scratch register
+        if (cpuMode == CPUMode::Thumb) {
+          //assembly[cpuMode]->writeInstruction(BreakPoint(cpuMode)->reloc(this, cpuMode), codeStream);
+          rword align = this->getCurrentPC() % 4;
+
+          size_t off = this->getDataBlockOffset() - 4 + align;
+
+          llvm::MCInst inst;
+          inst.setOpcode(llvm::ARM::t2ADR);
+          inst.addOperand(llvm::MCOperand::createReg(this->getScratchRegister()));
+          inst.addOperand(llvm::MCOperand::createImm(off /* Instruction size */));
+          inst.addOperand(llvm::MCOperand::createImm(14));
+          inst.addOperand(llvm::MCOperand::createReg(0));
+
+          //llvm::MCInst nop;
+          //nop.setOpcode(llvm::ARM::tMOVr);
+          //nop.addOperand(llvm::MCOperand::createReg(this->getScratchRegister()));
+          //nop.addOperand(llvm::MCOperand::createReg(this->getScratchRegister()));
+          //nop.addOperand(llvm::MCOperand::createImm(14));
+          //nop.addOperand(llvm::MCOperand::createReg(0));
+
+
+          //assembly[cpuMode]->writeInstruction(BreakPoint(CPUMode::Thumb)->reloc(this, cpuMode), codeStream);
+          //assembly[cpuMode]->writeInstruction(nop, codeStream);
+          assembly[cpuMode]->writeInstruction(inst, codeStream);
+
+        }
+
         for(const RelocatableInst::SharedPtr& inst : seqIt->insts) {
             if (getEpilogueOffset() > MINIMAL_BLOCK_SIZE) {
               assembly[cpuMode]->writeInstruction(inst->reloc(this, cpuMode), codeStream);
@@ -371,6 +408,7 @@ SeqWriteResult ExecBlock::writeSequence(std::vector<Patch>::const_iterator seqIt
 
     // Return write results
     unsigned bytesWritten = (unsigned) (codeStream->current_pos() - startOffset);
+
     //this->show();
     return SeqWriteResult {seqID, bytesWritten, patchWritten};
 }

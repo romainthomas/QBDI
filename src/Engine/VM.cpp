@@ -183,7 +183,7 @@ bool VM::callA(rword* retval, rword function, uint32_t argNum, const rword* args
 }
 
 bool VM::call(rword* retval, rword function, const std::vector<rword>& args) {
-    return this->callA(retval, function, args.size(), args.data()); 
+    return this->callA(retval, function, args.size(), args.data());
 }
 
 bool VM::callV(rword* retval, rword function, uint32_t argNum, va_list ap) {
@@ -191,7 +191,7 @@ bool VM::callV(rword* retval, rword function, uint32_t argNum, va_list ap) {
     for(uint32_t i = 0; i < argNum; i++) {
         args[i] = va_arg(ap, rword);
     }
-    
+
     bool res = this->callA(retval, function, argNum, args);
 
     delete[] args;

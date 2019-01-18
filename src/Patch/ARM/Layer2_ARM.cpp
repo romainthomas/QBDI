@@ -95,6 +95,20 @@ llvm::MCInst t2adr(unsigned int reg, rword offset) {
     return inst;
 }
 
+llvm::MCInst nop() {
+  // mov r0, r0
+  llvm::MCInst inst;
+
+  inst.setOpcode(llvm::ARM::MOVr);
+  inst.addOperand(llvm::MCOperand::createReg(66));
+  inst.addOperand(llvm::MCOperand::createReg(66));
+  inst.addOperand(llvm::MCOperand::createImm(14));
+  inst.addOperand(llvm::MCOperand::createReg(0));
+  inst.addOperand(llvm::MCOperand::createReg(0));
+
+  return inst;
+}
+
 llvm::MCInst blxi(rword offset) {
     llvm::MCInst inst;
 
@@ -251,7 +265,7 @@ RelocatableInst::SharedPtr Str(CPUMode cpuMode, Reg reg, Offset offset) {
         return DataBlockRel(stri12(reg, Reg(REG_PC), 0), 2, offset);
     }
     else if(cpuMode == CPUMode::Thumb) {
-        return DataBlockRel(t2stri12(reg, Reg(REG_PC), 0), 2, offset);
+      return DataBlockRel(t2stri12(reg, Reg(REG_PC), 0), 2, offset);
     }
     _QBDI_UNREACHABLE();
 }
@@ -261,7 +275,7 @@ RelocatableInst::SharedPtr Str(CPUMode cpuMode, Reg reg, Constant constant) {
         return MemoryConstant(stri12(reg, Reg(REG_PC), 0), 2, constant);
     }
     else if(cpuMode == CPUMode::Thumb) {
-        return MemoryConstant(t2stri12(reg, Reg(REG_PC), 0), 2, constant);
+      return MemoryConstant(t2stri12(reg, Reg(REG_PC), 0), 2, constant);
     }
     _QBDI_UNREACHABLE();
 }
@@ -281,7 +295,7 @@ RelocatableInst::SharedPtr Ldr(CPUMode cpuMode, Reg reg, Offset offset) {
         return DataBlockRel(ldri12(reg, Reg(REG_PC), 0), 2, offset);
     }
     else if(cpuMode == CPUMode::Thumb) {
-        return DataBlockRel(t2ldri12(reg, Reg(REG_PC), 0), 2, offset);
+      return DataBlockRel(t2ldri12(reg, Reg(REG_PC), 0), 2, offset);
     }
     _QBDI_UNREACHABLE();
 }
@@ -291,7 +305,7 @@ RelocatableInst::SharedPtr Ldr(CPUMode cpuMode, Reg reg, Constant constant) {
         return MemoryConstant(ldri12(reg, Reg(REG_PC), 0), 2, constant);
     }
     else if(cpuMode == CPUMode::Thumb) {
-        return MemoryConstant(t2ldri12(reg, Reg(REG_PC), 0), 2, constant);
+      return MemoryConstant(t2ldri12(reg, Reg(REG_PC), 0), 2, constant);
     }
     _QBDI_UNREACHABLE();
 };
@@ -301,7 +315,7 @@ RelocatableInst::SharedPtr LdrInstID(CPUMode cpuMode, Reg reg) {
         return InstId(ldri12(reg, Reg(REG_PC), 0), 2);
     }
     else if(cpuMode == CPUMode::Thumb) {
-        return InstId(t2ldri12(reg, Reg(REG_PC), 0), 2);
+      return InstId(t2ldri12(reg, Reg(REG_PC), 0), 2);
     }
     _QBDI_UNREACHABLE();
 }
@@ -393,7 +407,9 @@ RelocatableInst::SharedPtr BlxEpilogue(CPUMode cpuMode) {
         return EpilogueRel(blxi(0), 0, 0);
     }
     else if(cpuMode == CPUMode::Thumb) {
-        return EpilogueRel(tblxi(0), 2, 0);
+      //TODO: Not sure: Doesn the epilogue is always in ARM mode ?
+      int switchMode = 1; // 0
+      return EpilogueRel(tblxi(0), /* opn */2, /* offset */ switchMode);
     }
     _QBDI_UNREACHABLE();
 }
@@ -462,13 +478,17 @@ RelocatableInst::SharedPtr Pushr(Reg reg) {
 
 
 RelocatableInst::SharedPtr BreakPoint(CPUMode cpuMode) {
-  //TODO: Thumb Mode
+  // bkpt	#0
   llvm::MCInst inst;
-
-  inst.setOpcode(llvm::ARM::BKPT);
+  if(cpuMode == CPUMode::ARM) {
+    inst.setOpcode(llvm::ARM::BKPT);
+  } else if(cpuMode == CPUMode::Thumb) {
+    inst.setOpcode(llvm::ARM::tBKPT);
+  }
   inst.addOperand(llvm::MCOperand::createImm(0));
 
   return NoReloc(inst);
 }
+
 
 }

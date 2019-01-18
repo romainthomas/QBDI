@@ -15,8 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef RELOCATABLEINST_H
-#define RELOCATABLEINST_H
+#ifndef RELOCATABLE_INST_H
+#define RELOCATABLE_INST_H
 
 #include <memory>
 #include <vector>
@@ -30,32 +30,25 @@
 namespace QBDI {
 
 class RelocatableInst {
-public:
+  public:
+  using SharedPtr    = std::shared_ptr<RelocatableInst>;
+  using SharedPtrVec = std::vector<std::shared_ptr<RelocatableInst>>;
 
-    using SharedPtr    = std::shared_ptr<RelocatableInst>;
-    using SharedPtrVec = std::vector<std::shared_ptr<RelocatableInst>>;
+  public:
+  llvm::MCInst inst;
 
-    llvm::MCInst inst;
+  public:
+  RelocatableInst(llvm::MCInst inst);
 
-    RelocatableInst(llvm::MCInst inst) {
-        this->inst = inst;
-    }
-
-    virtual llvm::MCInst reloc(ExecBlock *exec_block, CPUMode cpuMode) {
-        return inst;
-    }
-
-    virtual ~RelocatableInst() {};
+  virtual llvm::MCInst reloc(ExecBlock *exec_block, CPUMode cpuMode);
+  virtual ~RelocatableInst();
 };
 
 class NoReloc : public RelocatableInst, public AutoAlloc<RelocatableInst, NoReloc> {
-public:
+  public:
+  NoReloc(llvm::MCInst inst);
+  llvm::MCInst reloc(ExecBlock *exec_block, CPUMode cpuMode);
 
-    NoReloc(llvm::MCInst inst) : RelocatableInst(inst) {}
-
-    llvm::MCInst reloc(ExecBlock *exec_block, CPUMode cpuMode) {
-        return inst;
-    }
 };
 
 }

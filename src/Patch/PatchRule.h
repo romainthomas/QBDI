@@ -89,19 +89,19 @@ class PatchRule : public AutoAlloc<PatchRule, PatchRule> {
             patch.metadata.address = toMerge->metadata.address;
             patch.metadata.instSize += toMerge->metadata.instSize;
         }
-        TempManager temp_manager(inst, llvmCPU->getMII(), llvmCPU->getMRI());
+        TempManager tempManager(inst, llvmCPU->getMII(), llvmCPU->getMRI());
         bool modifyPC = false;
         bool merge = false;
 
         for(auto g : generators) {
-            patch.append(g->generate(inst, address, instSize, cpuMode, &temp_manager, toMerge));
+            patch.append(g->generate(inst, address, instSize, cpuMode, &tempManager, toMerge));
             modifyPC |= g->modifyPC();
             merge |= g->doNotInstrument();
         }
         patch.setMerge(merge);
         patch.setModifyPC(modifyPC);
 
-        Reg::Vec usedRegisters = temp_manager.getUsedRegisters();
+        Reg::Vec usedRegisters = tempManager.getUsedRegisters();
 
         for(unsigned int i = 0; i < usedRegisters.size(); i++) {
             patch.prepend(SaveReg(usedRegisters[i], Offset(usedRegisters[i])).generate(cpuMode));

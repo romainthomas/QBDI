@@ -24,6 +24,7 @@ namespace QBDI {
 
 RelocatableInst::SharedPtrVec getExecBlockPrologue() {
     RelocatableInst::SharedPtrVec prologue;
+    //prologue.push_back({BreakPoint(CPUMode::ARM)});
 
     // Save return address on host stack:
     // STR LR, [sp, #-4]!
@@ -35,7 +36,7 @@ RelocatableInst::SharedPtrVec getExecBlockPrologue() {
 
     // Move sp at the beginning of the data block to solve memory addressing range problems
     // This instruction needs to be EXACTLY HERE for relative addressing alignement reasons
-    prologue.push_back(Adr((CPUMode) 0, Reg(REG_SP), 4080));
+    prologue.push_back(Adr((CPUMode) 0, Reg(REG_SP), 0xff0));
     append(prologue, SaveReg(Reg(REG_BP), Offset(offsetof(Context, hostState.fp))).generate((CPUMode) 0));
 
     // Restore FPR
@@ -96,7 +97,7 @@ RelocatableInst::SharedPtrVec getExecBlockEpilogue() {
     // Restore host BP, SP
     append(epilogue, LoadReg(Reg(REG_BP), Offset(offsetof(Context, hostState.fp))).generate((CPUMode) 0));
     append(epilogue, LoadReg(Reg(REG_SP), Offset(offsetof(Context, hostState.sp))).generate((CPUMode) 0));
-
+    //append(epilogue, {BreakPoint(CPUMode::ARM)});
     // Return to host
     epilogue.push_back(Popr(Reg(REG_PC)));
 
@@ -209,7 +210,7 @@ PatchRule::SharedPtrVec getDefaultPatchRules() {
     );
 
     /* Rule #5: Simulating BL immediate instructions for Thumb.
-     * Target:  BL(X) IMM
+     * Target:  BL IMM
      * Patch:   Temp(0) := PC + Operand(2)
      *          DataOffset[Offset(PC)] := Temp(0)
      *          SimulateLink(Temp(0))
@@ -419,7 +420,29 @@ PatchRule::SharedPtrVec getDefaultPatchRules() {
         )
     );
 
-    /* Rule #15: Default rule for every other instructions.
+    /* Rule #15:
+     * Target:  LDR REG, [pc, OFF] (Thumb mode)
+     * Patch:   Temp(0) := PC + Constant(0)
+     *          LDR REG, [Temp(0), OFF]
+    */
+    //rules.push_back(
+    //    PatchRule(
+    //        OpIs(llvm::ARM::tLDRpci),
+    //        {
+    //            GetPCOffset(Temp(0), Constant(0)),
+    //            ModifyInstruction({
+    //                SetOpcode(llvm::ARM::tLDRi),
+    //                AddOperand(Operand(0), XXX),
+    //                AddOperand(Operand(1), Temp(0)),
+    //                AddOperand(Operand(4), Constant(0)),
+    //            }),
+    //        }
+    //    )
+    //);
+
+
+
+    /* Rule #16: Default rule for every other instructions.
      * Target:   *
      * Patch:    Output original unmodified instructions.
     */

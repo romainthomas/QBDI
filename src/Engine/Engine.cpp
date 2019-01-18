@@ -318,7 +318,7 @@ bool Engine::run(rword start, rword stop) {
             #endif
 
             // Is cache flush pending?
-            if(blockManager->isFlushPending()) {
+            if (blockManager->isFlushPending()) {
                 // Backup fprState and gprState
                 *gprState = *curGPRState;
                 *fprState = *curFPRState;

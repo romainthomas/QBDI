@@ -36,6 +36,11 @@ llvm::MCInst pop(unsigned int reg, int64_t cond);
 
 llvm::MCInst push(unsigned int reg, int64_t cond);
 
+llvm::MCInst t2adr(unsigned int reg, rword offset);
+
+llvm::MCInst nop();
+
+
 // High level layer 2
 
 RelocatableInst::SharedPtr Ldr(CPUMode cpuMode, Reg reg, Reg base, Offset offset);
@@ -79,6 +84,7 @@ RelocatableInst::SharedPtr Popr(Reg reg);
 RelocatableInst::SharedPtr Pushr(Reg reg);
 
 RelocatableInst::SharedPtr BreakPoint(CPUMode cpuMode);
+
 }
 
 #endif
