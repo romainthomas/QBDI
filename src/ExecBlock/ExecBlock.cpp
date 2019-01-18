@@ -23,7 +23,9 @@
 #include "Memory.h"
 #include "Utility/LogSys.h"
 #include "Utility/System.h"
+
 #include <iostream>
+#include <sstream>
 
 #if defined(QBDI_OS_WIN)
     #if defined(QBDI_ARCH_X86_64) || defined(QBDI_ARCH_X86)
@@ -47,6 +49,25 @@ uint32_t ExecBlock::epilogueSize = 0;
 RelocatableInst::SharedPtrVec ExecBlock::execBlockPrologue = RelocatableInst::SharedPtrVec();
 RelocatableInst::SharedPtrVec ExecBlock::execBlockEpilogue = RelocatableInst::SharedPtrVec();
 void (*ExecBlock::runCodeBlockFct)(void*) = NULL;
+
+size_t registerIndex(unsigned regId) {
+  static const std::map<unsigned, size_t> regMap {
+    {llvm::ARM::R0, 0},
+    {llvm::ARM::R1, 1},
+    {llvm::ARM::R2, 2},
+    {llvm::ARM::R3, 3},
+    {llvm::ARM::R4, 4},
+    {llvm::ARM::R5, 5},
+    {llvm::ARM::R6, 6},
+    {llvm::ARM::R7, 7},
+    {llvm::ARM::R8, 8},
+    {llvm::ARM::R9, 0},
+    {llvm::ARM::R10, 10},
+    {llvm::ARM::R11, 11},
+    {llvm::ARM::R12, 12},
+  };
+  return regMap.at(regId);
+}
 
 ExecBlock::ExecBlock(Assembly* assembly[CPUMode::COUNT], VMInstanceRef vminstance) : vminstance{vminstance} {
 
@@ -284,6 +305,42 @@ VMAction ExecBlock::execute() {
     return CONTINUE;
 }
 
+bool ExecBlock::setScratchRegister(std::vector<Patch>::const_iterator seqIt, std::vector<Patch>::const_iterator seqEnd) {
+  // Register used within the sequence
+  std::set<unsigned> registerUsed;
+  std::vector<unsigned> freeRegister = {
+    llvm::ARM::R7,
+    llvm::ARM::R6,
+    llvm::ARM::R5,
+    llvm::ARM::R4,
+    llvm::ARM::R3,
+    llvm::ARM::R2,
+    llvm::ARM::R1,
+    llvm::ARM::R0,
+  };
+  this->scratchRegister = llvm::ARM::PC;
+  while (seqIt != seqEnd) {
+    for (const RelocatableInst::SharedPtr& inst : seqIt->insts) {
+      RelocatableInst::RegisterUsed used = inst->regUsed(this, seqIt->metadata.cpuMode);
+      registerUsed.insert(std::make_move_iterator(std::begin(used)), std::make_move_iterator(std::end(used)));
+    }
+    ++seqIt;
+  }
+  std::ostringstream oss;
+  for (unsigned r : registerUsed) {
+    oss << this->assembly[0]->getRegisterName(r) << ", ";
+  }
+
+  LogWarning("ExecBlock::setScratchRegister", "Registers used: %s", oss.str().c_str());
+  for (unsigned r : freeRegister) {
+    if (registerUsed.find(r) == std::end(registerUsed)) {
+      this->scratchRegister = r;
+      return true;
+    }
+  }
+  return false;
+}
+
 SeqWriteResult ExecBlock::writeSequence(std::vector<Patch>::const_iterator seqIt, std::vector<Patch>::const_iterator seqEnd, SeqType seqType) {
     rword startOffset     = static_cast<rword>(codeStream->current_pos());
     uint16_t startInstID  = static_cast<uint16_t>(getNextInstID());
@@ -313,6 +370,7 @@ SeqWriteResult ExecBlock::writeSequence(std::vector<Patch>::const_iterator seqIt
 
     // JIT the basic block instructions patch per patch
     // A patch correspond to an original instruction and should be written in its entierty
+    bool written = false;
     while (seqIt != seqEnd) {
         bool rollback                 = false;
         rword rollbackOffset          = codeStream->current_pos();
@@ -323,7 +381,13 @@ SeqWriteResult ExecBlock::writeSequence(std::vector<Patch>::const_iterator seqIt
         // Attempt to write a complete patch. If not, rollback to the last complete patch written
 
         // Fill the scratch register
-        if (cpuMode == CPUMode::Thumb) {
+        if (cpuMode == CPUMode::Thumb and not written) {
+
+          if (not this->setScratchRegister(seqIt, seqEnd)) {
+            LogWarning("ExecBlock::writeBasicBlock", "Scratch Register failled!");
+          } else {
+            LogDebug("ExecBlock::writeBasicBlock", "Scratch Register ok: %s", assembly[0]->getRegisterName(this->getScratchRegister()));
+          }
           //assembly[cpuMode]->writeInstruction(BreakPoint(cpuMode)->reloc(this, cpuMode), codeStream);
           rword align = this->getCurrentPC() % 4;
           size_t off  = this->getDataBlockOffset() - 4 + align;
@@ -335,21 +399,12 @@ SeqWriteResult ExecBlock::writeSequence(std::vector<Patch>::const_iterator seqIt
           inst.addOperand(llvm::MCOperand::createImm(14));
           inst.addOperand(llvm::MCOperand::createReg(0));
 
-          //llvm::MCInst nop;
-          //nop.setOpcode(llvm::ARM::tMOVr);
-          //nop.addOperand(llvm::MCOperand::createReg(this->getScratchRegister()));
-          //nop.addOperand(llvm::MCOperand::createReg(this->getScratchRegister()));
-          //nop.addOperand(llvm::MCOperand::createImm(14));
-          //nop.addOperand(llvm::MCOperand::createReg(0));
-
-
-          //assembly[cpuMode]->writeInstruction(BreakPoint(CPUMode::Thumb)->reloc(this, cpuMode), codeStream);
-          //assembly[cpuMode]->writeInstruction(nop, codeStream);
           assembly[cpuMode]->writeInstruction(inst, codeStream);
+          written = true;
 
         }
 
-        for(const RelocatableInst::SharedPtr& inst : seqIt->insts) {
+        for (const RelocatableInst::SharedPtr& inst : seqIt->insts) {
             if (getEpilogueOffset() > MINIMAL_BLOCK_SIZE) {
               assembly[cpuMode]->writeInstruction(inst->reloc(this, cpuMode), codeStream);
             }
@@ -382,7 +437,7 @@ SeqWriteResult ExecBlock::writeSequence(std::vector<Patch>::const_iterator seqIt
             // Register instruction
             instRegistry.push_back(InstInfo {seqID, (uint16_t) rollbackOffset});
             // Update indexes
-            seqIt++;
+            ++seqIt;
             patchWritten += 1;
         }
     }
@@ -393,6 +448,17 @@ SeqWriteResult ExecBlock::writeSequence(std::vector<Patch>::const_iterator seqIt
         for(RelocatableInst::SharedPtr &inst : terminator) {
             assembly[cpuMode]->writeInstruction(inst->reloc(this, cpuMode), codeStream);
         }
+    }
+
+    if (cpuMode == CPUMode::Thumb) {
+      //assembly[cpuMode]->writeInstruction(BreakPoint(cpuMode)->reloc(this, cpuMode), codeStream);
+      unsigned scratchReg = this->getScratchRegister();
+      size_t registerIdx = registerIndex(scratchReg);
+
+      LogDebug("ExecBlock::writeBasicBlock", "%s -> %zu", assembly[0]->getRegisterName(scratchReg), registerIdx);
+      llvm::MCInst ldr = Ldr(cpuMode, Reg(registerIdx), Offset(Reg(registerIdx)))->reloc(this, cpuMode);
+      assembly[cpuMode]->writeInstruction(ldr, codeStream);
+
     }
 
     // JIT the jump to epilogue

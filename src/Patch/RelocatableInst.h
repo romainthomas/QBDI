@@ -31,8 +31,9 @@ namespace QBDI {
 
 class RelocatableInst {
   public:
-  using SharedPtr    = std::shared_ptr<RelocatableInst>;
-  using SharedPtrVec = std::vector<std::shared_ptr<RelocatableInst>>;
+  using SharedPtr      = std::shared_ptr<RelocatableInst>;
+  using SharedPtrVec   = std::vector<std::shared_ptr<RelocatableInst>>;
+  using RegisterUsed   = std::vector<unsigned>;
 
   public:
   llvm::MCInst inst;
@@ -40,7 +41,8 @@ class RelocatableInst {
   public:
   RelocatableInst(llvm::MCInst inst);
 
-  virtual llvm::MCInst reloc(ExecBlock *exec_block, CPUMode cpuMode);
+  virtual llvm::MCInst reloc(ExecBlock *execBlock, CPUMode cpuMode);
+  virtual RegisterUsed regUsed(ExecBlock *execBlock, CPUMode cpuMode);
   virtual ~RelocatableInst();
 };
 

@@ -30,6 +30,18 @@ llvm::MCInst RelocatableInst::reloc(ExecBlock *execBlock, CPUMode cpuMode) {
   return this->inst;
 }
 
+RelocatableInst::RegisterUsed RelocatableInst::regUsed(ExecBlock *execBlock, CPUMode cpuMode) {
+  std::set<unsigned> regs;
+  llvm::MCInst inst = this->reloc(execBlock, cpuMode);
+  for (const llvm::MCOperand& op : inst) {
+    if (op.isReg()) {
+      regs.insert(op.getReg());
+    }
+  }
+
+  return {std::begin(regs), std::end(regs)};
+}
+
 RelocatableInst::~RelocatableInst() = default;
 
 // NoReloc

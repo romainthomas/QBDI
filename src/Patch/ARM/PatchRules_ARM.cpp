@@ -73,7 +73,6 @@ RelocatableInst::SharedPtrVec getExecBlockPrologue() {
 RelocatableInst::SharedPtrVec getExecBlockEpilogue() {
     RelocatableInst::SharedPtrVec epilogue;
 
-
     // Save guest state
     // R0 .. SP
     for (unsigned int i = 0; i < NUM_GPR - 2; i++) {
@@ -380,7 +379,26 @@ PatchRule::SharedPtrVec getDefaultPatchRules() {
         )
     );
 
-    /* Rule #13: Generic PC modification patch with potential conditional code.
+    /* Rule #13:
+      pop	{r4, r5, r6, r7, pc}
+    */
+    rules.push_back(
+        PatchRule(
+            And({
+                OpIs(llvm::ARM::tPOP),
+                UseReg(Reg(REG_PC)),
+            }),
+            {
+                ModifyInstruction({
+                    RemoveOperand(Reg(REG_PC))
+                }),
+                SimulatePopPC(Temp(0)),
+                //SimulateExchange(Temp(0)),
+            }
+        )
+    );
+
+    /* Rule #14: Generic PC modification patch with potential conditional code.
      * Target:  Anything that has PC as destination operand. E.g. ADDcc PC, PC, R1
      * Patch:   Temp(0) := PC + Constant(0)  # to substitute read values of PC
      *          Temp(1) := PC + Constant(-4) # to substitute written values of PC
@@ -403,7 +421,9 @@ PatchRule::SharedPtrVec getDefaultPatchRules() {
         )
     );
 
-    /* Rule #14: Generic PC utilization patch
+
+
+    /* Rule #15: Generic PC utilization patch
      * Target:  Anything that uses PC. E.g. ADDcc R2, PC, R1
      * Patch:   Temp(0) := PC + Constant(0)  # to substitute read values of PC
      *          ADDcc R2, PC, R1 --> ADDcc R2, Temp(0), R1
@@ -420,7 +440,7 @@ PatchRule::SharedPtrVec getDefaultPatchRules() {
         )
     );
 
-    /* Rule #15:
+    /* Rule #16:
      * Target:  LDR REG, [pc, OFF] (Thumb mode)
      * Patch:   Temp(0) := PC + Constant(0)
      *          LDR REG, [Temp(0), OFF]
@@ -438,8 +458,7 @@ PatchRule::SharedPtrVec getDefaultPatchRules() {
     );
 
 
-
-    /* Rule #16: Default rule for every other instructions.
+    /* Rule #17: Default rule for every other instructions.
      * Target:   *
      * Patch:    Output original unmodified instructions.
     */

@@ -375,6 +375,8 @@ class ExecBlock {
     inline unsigned getScratchRegister() const {
       return this->scratchRegister;
     }
+
+    bool setScratchRegister(std::vector<Patch>::const_iterator seqIt,  std::vector<Patch>::const_iterator seqEnd);
 };
 
 }

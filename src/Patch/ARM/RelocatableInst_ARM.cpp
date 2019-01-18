@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 #include "Patch/ARM/RelocatableInst_ARM.h"
+#include "Patch/ARM/PatchRules_ARM.h"
 #include "Patch/ARM/Layer2_ARM.h"
 
 namespace QBDI {
@@ -194,7 +195,6 @@ llvm::MCInst AdjustPCAlign::reloc(ExecBlock *execBlock, CPUMode cpuMode) {
    }
   return RelocatableInst::reloc(execBlock, cpuMode);
 }
-
 
 
 }
