@@ -219,6 +219,17 @@ llvm::MCInst pop(unsigned int reg, int64_t cond) {
     return inst;
 }
 
+llvm::MCInst tpop(unsigned int reg) {
+    llvm::MCInst inst;
+
+    inst.setOpcode(llvm::ARM::tPOP);
+    inst.addOperand(llvm::MCOperand::createImm(14));
+    inst.addOperand(llvm::MCOperand::createReg(0));
+    inst.addOperand(llvm::MCOperand::createReg(reg));
+
+    return inst;
+}
+
 llvm::MCInst push(unsigned int reg, int64_t cond) {
     llvm::MCInst inst;
 

@@ -33,6 +33,7 @@ llvm::MCInst adr(unsigned int reg, rword offset);
 llvm::MCInst add(unsigned int dst, unsigned int src);
 
 llvm::MCInst pop(unsigned int reg, int64_t cond);
+llvm::MCInst tpop(unsigned int reg);
 
 llvm::MCInst push(unsigned int reg, int64_t cond);
 

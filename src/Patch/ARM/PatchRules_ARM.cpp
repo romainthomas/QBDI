@@ -292,7 +292,28 @@ PatchRule::SharedPtrVec getDefaultPatchRules() {
         )
     );
 
-    /* Rule #9: Simulating B with conditional flag under ARM.
+    /* Rule #9: Simulating B with conditional flag under thumb2.
+     * Target:  Bcc IMM
+     * Patch:     Temp(0) := PC + Operand(0)
+     *         ---Bcc IMM --> Bcc END
+     *         |  Temp(0) := PC + Constant(-4) # next instruction
+     *         -->END: DataOffset[Offset(PC)] := Temp(0)
+    */
+    rules.push_back(
+        PatchRule(
+            OpIs(llvm::ARM::t2Bcc),
+            {
+                GetPCOffset(Temp(0), Operand(0)),
+                ModifyInstruction({
+                    SetOperand(Operand(0), Constant(4))
+                }),
+                GetPCOffset(Temp(0), Constant(-4)),
+                WriteTemp(Temp(0), Offset(Reg(REG_PC)))
+            }
+        )
+    );
+
+    /* Rule #10: Simulating B with conditional flag under ARM.
      * Target:  Bcc IMM
      * Patch:     Temp(0) := PC + Operand(0)
      *         ---Bcc IMM --> Bcc END
@@ -313,11 +334,11 @@ PatchRule::SharedPtrVec getDefaultPatchRules() {
         )
     );
 
-    /* Rule #10: Simulating B with conditional flag under thumb.
+    /* Rule #11: Simulating B with conditional flag under thumb.
      * Target:  Bcc IMM
      * Patch:     Temp(0) := PC + Operand(0)
      *         ---Bcc IMM --> Bcc END
-     *         |  Temp(0) := PC + Constant(-4) # next instruction
+     *         |  Temp(0) := PC + Constant(-2) # next instruction
      *         -->END: DataOffset[Offset(PC)] := Temp(0)
     */
     rules.push_back(
@@ -334,7 +355,8 @@ PatchRule::SharedPtrVec getDefaultPatchRules() {
         )
     );
 
-    /* Rule #11: Simulating CBZ with conditional flag.
+
+    /* Rule #12: Simulating CBZ with conditional flag.
      * Target:  Bcc IMM
      * Patch:     Temp(0) := PC + Operand(1)
      *         ---CBZ IMM --> Bcc END
@@ -358,7 +380,7 @@ PatchRule::SharedPtrVec getDefaultPatchRules() {
         )
     );
 
-    /* Rule #12: Simulating LDMIA using pc in the reg list.
+    /* Rule #13: Simulating LDMIA using pc in the reg list.
      * Target:  LDMIA {REG1, ..., REGN, pc}
      * Patch:   LDMIA {REG1, ..., REGN, pc} --> LDMIA {REG1, ..., REGN}
      *          SimulateRet(Temp(0))
@@ -379,7 +401,7 @@ PatchRule::SharedPtrVec getDefaultPatchRules() {
         )
     );
 
-    /* Rule #13:
+    /* Rule #14:
       pop	{r4, r5, r6, r7, pc}
     */
     rules.push_back(
@@ -393,12 +415,12 @@ PatchRule::SharedPtrVec getDefaultPatchRules() {
                     RemoveOperand(Reg(REG_PC))
                 }),
                 SimulatePopPC(Temp(0)),
-                //SimulateExchange(Temp(0)),
+                SimulateExchange(Temp(0)),
             }
         )
     );
 
-    /* Rule #14: Generic PC modification patch with potential conditional code.
+    /* Rule #15: Generic PC modification patch with potential conditional code.
      * Target:  Anything that has PC as destination operand. E.g. ADDcc PC, PC, R1
      * Patch:   Temp(0) := PC + Constant(0)  # to substitute read values of PC
      *          Temp(1) := PC + Constant(-4) # to substitute written values of PC
@@ -423,7 +445,7 @@ PatchRule::SharedPtrVec getDefaultPatchRules() {
 
 
 
-    /* Rule #15: Generic PC utilization patch
+    /* Rule #16: Generic PC utilization patch
      * Target:  Anything that uses PC. E.g. ADDcc R2, PC, R1
      * Patch:   Temp(0) := PC + Constant(0)  # to substitute read values of PC
      *          ADDcc R2, PC, R1 --> ADDcc R2, Temp(0), R1
@@ -440,7 +462,7 @@ PatchRule::SharedPtrVec getDefaultPatchRules() {
         )
     );
 
-    /* Rule #16:
+    /* Rule #17:
      * Target:  LDR REG, [pc, OFF] (Thumb mode)
      * Patch:   Temp(0) := PC + Constant(0)
      *          LDR REG, [Temp(0), OFF]
@@ -458,7 +480,7 @@ PatchRule::SharedPtrVec getDefaultPatchRules() {
     );
 
 
-    /* Rule #17: Default rule for every other instructions.
+    /* Rule #18: Default rule for every other instructions.
      * Target:   *
      * Patch:    Output original unmodified instructions.
     */

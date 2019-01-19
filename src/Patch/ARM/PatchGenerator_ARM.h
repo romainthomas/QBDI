@@ -308,12 +308,19 @@ class LoadReg: public PatchGenerator, public AutoAlloc<PatchGenerator, LoadReg> 
 };
 
 class JmpEpilogue : public PatchGenerator, public AutoAlloc<PatchGenerator, JmpEpilogue> {
+  Reg scratchRegister;
 
   public:
 
     /*! Generate a jump instruction which target the epilogue of the ExecBlock.
     */
-    JmpEpilogue() {}
+    JmpEpilogue() :
+      scratchRegister{Reg(REG_PC)}
+    {}
+
+    JmpEpilogue(Reg scratchRegister) :
+      scratchRegister{scratchRegister}
+    {}
 
     /*! Output:
      *
@@ -324,6 +331,9 @@ class JmpEpilogue : public PatchGenerator, public AutoAlloc<PatchGenerator, JmpE
 
         RelocatableInst::SharedPtrVec patch;
         patch.push_back(Str(cpuMode, Reg(REG_LR), Offset(Reg(REG_LR))));
+        if (scratchRegister != Reg(REG_PC)) {
+          patch.push_back(Ldr(cpuMode, scratchRegister, Offset(scratchRegister)));
+        }
         if(cpuMode == CPUMode::ARM) {
             patch.push_back(BlEpilogue(cpuMode));
         }
@@ -424,15 +434,26 @@ class SimulatePopPC : public PatchGenerator, public AutoAlloc<PatchGenerator, Si
     */
     RelocatableInst::SharedPtrVec generate(const llvm::MCInst *inst, rword address, rword instSize,
         CPUMode cpuMode, TempManager *temp_manager, const Patch *toMerge) {
-
         RelocatableInst::SharedPtrVec patch;
-        int64_t cond = inst->getOperand(2).getImm();
+        if (cpuMode == CPUMode::ARM) {
+          int64_t cond = inst->getOperand(2).getImm();
 
-        append(patch, GetPCOffset(temp, Constant(-4)).generate(inst, address, instSize, cpuMode, temp_manager, nullptr));
-        patch.push_back(NoReloc(
-            pop(temp_manager->getRegForTemp(temp), cond)
-        ));
-        append(patch, WriteTemp(temp, Offset(Reg(REG_PC))).generate(inst, address, instSize, cpuMode, temp_manager, nullptr));
+          append(patch, GetPCOffset(temp, Constant(-4)).generate(inst, address, instSize, cpuMode, temp_manager, nullptr));
+          patch.push_back(NoReloc(
+              pop(temp_manager->getRegForTemp(temp), cond)
+          ));
+          append(patch, WriteTemp(temp, Offset(Reg(REG_PC))).generate(inst, address, instSize, cpuMode, temp_manager, nullptr));
+          return patch;
+        }
+
+        if (cpuMode == CPUMode::Thumb) {
+          append(patch, GetPCOffset(temp, Constant(-2)).generate(inst, address, instSize, cpuMode, temp_manager, nullptr));
+          patch.push_back(NoReloc(
+              tpop(temp_manager->getRegForTemp(temp))
+          ));
+          append(patch, WriteTemp(temp, Offset(Reg(REG_PC))).generate(inst, address, instSize, cpuMode, temp_manager, nullptr));
+          return patch;
+        }
 
         return patch;
     }

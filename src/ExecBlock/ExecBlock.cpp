@@ -450,19 +450,28 @@ SeqWriteResult ExecBlock::writeSequence(std::vector<Patch>::const_iterator seqIt
         }
     }
 
-    if (cpuMode == CPUMode::Thumb) {
-      //assembly[cpuMode]->writeInstruction(BreakPoint(cpuMode)->reloc(this, cpuMode), codeStream);
-      unsigned scratchReg = this->getScratchRegister();
-      size_t registerIdx = registerIndex(scratchReg);
+    //if (cpuMode == CPUMode::Thumb) {
+    //  //assembly[cpuMode]->writeInstruction(BreakPoint(cpuMode)->reloc(this, cpuMode), codeStream);
+    //  unsigned scratchReg = this->getScratchRegister();
+    //  size_t registerIdx = registerIndex(scratchReg);
 
-      LogDebug("ExecBlock::writeBasicBlock", "%s -> %zu", assembly[0]->getRegisterName(scratchReg), registerIdx);
-      llvm::MCInst ldr = Ldr(cpuMode, Reg(registerIdx), Offset(Reg(registerIdx)))->reloc(this, cpuMode);
-      assembly[cpuMode]->writeInstruction(ldr, codeStream);
+    //  LogDebug("ExecBlock::writeBasicBlock", "%s -> %zu", assembly[0]->getRegisterName(scratchReg), registerIdx);
+    //  llvm::MCInst ldr = Ldr(cpuMode, Reg(registerIdx), Offset(Reg(registerIdx)))->reloc(this, cpuMode);
+    //  assembly[cpuMode]->writeInstruction(ldr, codeStream);
 
-    }
+    //}
 
     // JIT the jump to epilogue
-    RelocatableInst::SharedPtrVec jmpEpilogue = JmpEpilogue().generate(nullptr, 0, 0, cpuMode, nullptr, nullptr);
+    RelocatableInst::SharedPtrVec jmpEpilogue;
+    if (cpuMode == CPUMode::Thumb) {
+      unsigned scratchReg = this->getScratchRegister();
+      size_t registerIdx  = registerIndex(scratchReg);
+
+      LogDebug("ExecBlock::writeBasicBlock", "%s -> %zu", assembly[0]->getRegisterName(scratchReg), registerIdx);
+      jmpEpilogue = JmpEpilogue(Reg(registerIdx)).generate(nullptr, 0, 0, cpuMode, nullptr, nullptr);
+    } else {
+      jmpEpilogue = JmpEpilogue().generate(nullptr, 0, 0, cpuMode, nullptr, nullptr);
+    }
     for(RelocatableInst::SharedPtr &inst : jmpEpilogue) {
         assembly[cpuMode]->writeInstruction(inst->reloc(this, cpuMode), codeStream);
     }
