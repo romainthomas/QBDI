@@ -30,12 +30,6 @@
 #include "Patch/Patch.h"
 #include "Platform.h"
 
-#if defined(QBDI_ARCH_X86_64) || defined(QBDI_ARCH_X86)
-#include "Patch/X86_64/PatchRules_X86_64.h"
-#elif defined(QBDI_ARCH_ARM)
-#include "Patch/ARM/PatchRules_ARM.h"
-#endif
-
 namespace QBDI {
 
 /*! A patch rule written in PatchDSL.
@@ -54,8 +48,7 @@ class PatchRule : public AutoAlloc<PatchRule, PatchRule> {
      * @param[in] condition   A PatchCondition which determine wheter or not this PatchRule applies.
      * @param[in] generators  A vector of PatchGenerator which will produce the patch instructions.
     */
-    PatchRule(PatchCondition::SharedPtr condition, PatchGenerator::SharedPtrVec generators)
-        : condition(condition), generators(generators) {};
+    PatchRule(PatchCondition::SharedPtr condition, PatchGenerator::SharedPtrVec generators);
 
     /*! Determine wheter this rule applies by evaluating this rule condition on the current
      *  context.
@@ -67,9 +60,7 @@ class PatchRule : public AutoAlloc<PatchRule, PatchRule> {
      *
      * @return True if this patch condition evaluate to true on this context.
     */
-    bool canBeApplied(const llvm::MCInst *inst, rword address, rword instSize, LLVMCPU* llvmCPU) {
-        return condition->test(inst, address, instSize, llvmCPU->getMII());
-    }
+    bool canBeApplied(const llvm::MCInst *inst, rword address, rword instSize, LLVMCPU* llvmCPU);
 
     /*! Generate this rule output patch by evaluating its generators on the current context. Also
      *  handles the temporary register management for this patch.
@@ -83,36 +74,7 @@ class PatchRule : public AutoAlloc<PatchRule, PatchRule> {
      *
      * @return A Patch which is composed of the input context and a series of RelocatableInst.
     */
-    Patch generate(const llvm::MCInst *inst, rword address, rword instSize, CPUMode cpuMode, LLVMCPU* llvmCPU, const Patch* toMerge = nullptr) {
-        Patch patch(*inst, address, instSize, cpuMode);
-        if(toMerge != nullptr) {
-            patch.metadata.address = toMerge->metadata.address;
-            patch.metadata.instSize += toMerge->metadata.instSize;
-        }
-        TempManager tempManager(inst, llvmCPU->getMII(), llvmCPU->getMRI());
-        bool modifyPC = false;
-        bool merge = false;
-
-        for(auto g : generators) {
-            patch.append(g->generate(inst, address, instSize, cpuMode, &tempManager, toMerge));
-            modifyPC |= g->modifyPC();
-            merge |= g->doNotInstrument();
-        }
-        patch.setMerge(merge);
-        patch.setModifyPC(modifyPC);
-
-        Reg::Vec usedRegisters = tempManager.getUsedRegisters();
-
-        for(unsigned int i = 0; i < usedRegisters.size(); i++) {
-            patch.prepend(SaveReg(usedRegisters[i], Offset(usedRegisters[i])).generate(cpuMode));
-        }
-
-        for(unsigned int i = 0; i < usedRegisters.size(); i++) {
-            patch.append(LoadReg(usedRegisters[i], Offset(usedRegisters[i])).generate(cpuMode));
-        }
-
-        return patch;
-    }
+    Patch generate(const llvm::MCInst *inst, rword address, rword instSize, CPUMode cpuMode, LLVMCPU* llvmCPU, const Patch* toMerge = nullptr);
 };
 
 }

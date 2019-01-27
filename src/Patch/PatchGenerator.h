@@ -39,11 +39,11 @@ class PatchGenerator {
     virtual RelocatableInst::SharedPtrVec generate(const llvm::MCInst *inst, rword address,
         rword instSize, CPUMode cpuMode, TempManager *temp_manager, const Patch *toMerge) = 0;
 
-    virtual ~PatchGenerator() {};
+    virtual ~PatchGenerator();
 
-    virtual bool modifyPC() { return false; }
+    virtual bool modifyPC();
 
-    virtual bool doNotInstrument() { return false; }
+    virtual bool doNotInstrument();
 };
 
 class ModifyInstruction : public PatchGenerator, public AutoAlloc<PatchGenerator, ModifyInstruction> {
@@ -55,48 +55,33 @@ class ModifyInstruction : public PatchGenerator, public AutoAlloc<PatchGenerator
      *
      * @param[in] transforms Vector of InstTransform to be applied.
     */
-    ModifyInstruction(InstTransform::SharedPtrVec transforms) : transforms(transforms) {};
+    ModifyInstruction(InstTransform::SharedPtrVec transforms);
 
     /*!
      * Output:
      *   (depends on the current instructions and transforms)
     */
-    RelocatableInst::SharedPtrVec generate(const llvm::MCInst *inst, rword address, rword instSize,
-        CPUMode cpuMode, TempManager *temp_manager, const Patch *toMerge) {
-
-        llvm::MCInst a(*inst);
-        for(auto t: transforms) {
-            t->transform(a, address, instSize, temp_manager);
-        }
-
-        RelocatableInst::SharedPtrVec out;
-        if(toMerge != nullptr) {
-            append(out, toMerge->insts);
-        }
-        out.push_back(NoReloc(a));
-        return out;
-    }
+    virtual RelocatableInst::SharedPtrVec generate(const llvm::MCInst *inst, rword address, rword instSize,
+        CPUMode cpuMode, TempManager *temp_manager, const Patch *toMerge) override;
 };
 
 class DoNotInstrument : public PatchGenerator, public AutoAlloc<PatchGenerator, DoNotInstrument> {
 
-public:
+  public:
 
     /*! Adds a "do not instrument" flag to the resulting patch which allows it to skip the
      * instrumentation process of the engine.
     */
-    DoNotInstrument() {};
+    DoNotInstrument();
 
     /*!
      * Output:
      *   (none)
     */
-    RelocatableInst::SharedPtrVec generate(const llvm::MCInst *inst, rword address, rword instSize,
-        CPUMode cpuMode, TempManager *temp_manager, const Patch *toMerge) {
-        return {};
-    }
+    virtual RelocatableInst::SharedPtrVec generate(const llvm::MCInst *inst, rword address, rword instSize,
+        CPUMode cpuMode, TempManager *temp_manager, const Patch *toMerge) override;
 
-    bool doNotInstrument() { return true; }
+    virtual bool doNotInstrument() override;
 };
 
 }

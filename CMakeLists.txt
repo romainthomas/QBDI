@@ -22,6 +22,17 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR ${QBDI_DEBUG})
     add_definitions(-D_QBDI_DEBUG)
 endif()
 
+
+# CCACHE
+# ======
+option(QBDI_CCACHE "Enable CCACHE" ON)
+find_program(CCACHE_FOUND ccache)
+message(STATUS "ccache: ${QBDI_CCACHE}")
+if(CCACHE_FOUND AND QBDI_CCACHE)
+  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+  set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+endif()
+
 # Process the PLATFORM variable
 
 if(NOT DEFINED PLATFORM)
@@ -209,44 +220,17 @@ elseif(${PLATFORM} STREQUAL "iOS-ARM")
 endif()
 
 # Add QBDI target
+# Final QBDI static library is a merge of static libraries
+add_library(QBDI_obj INTERFACE)
 
-set(SOURCES
-    "src/Engine/Engine.cpp"
-    "src/Engine/LLVMCPU.cpp"
-    "src/Engine/VM.cpp"
-    "src/Engine/VM_C.cpp"
-    "src/ExecBlock/ExecBlock.cpp"
-    "src/ExecBlock/ExecBlockManager.cpp"
-    "src/ExecBroker/ExecBroker.cpp"
-    "src/Patch/InstrRules.cpp"
-    "src/Patch/${BASE_ARCH}/InstInfo_${BASE_ARCH}.cpp"
-    "src/Patch/${BASE_ARCH}/PatchRules_${BASE_ARCH}.cpp"
-    "src/Patch/${BASE_ARCH}/Layer2_${BASE_ARCH}.cpp"
-    "src/Patch/${BASE_ARCH}/InstrRules_${BASE_ARCH}.cpp"
-    "src/Utility/memory_ostream.cpp"
-    "src/Utility/Assembly.cpp"
-    "src/Utility/Memory.cpp"
-    "src/Utility/System.cpp"
-    "src/Utility/LogSys.cpp"
-    "src/Utility/Version.cpp"
-    "src/Utility/String.cpp"
-)
+include("${CMAKE_CURRENT_SOURCE_DIR}/src/Engine/CMakeLists.txt")
+include("${CMAKE_CURRENT_SOURCE_DIR}/src/ExecBroker/CMakeLists.txt")
+include("${CMAKE_CURRENT_SOURCE_DIR}/src/ExecBlock/CMakeLists.txt")
+include("${CMAKE_CURRENT_SOURCE_DIR}/src/Patch/CMakeLists.txt")
+include("${CMAKE_CURRENT_SOURCE_DIR}/src/Utility/CMakeLists.txt")
 
-if(${OS} STREQUAL "iOS")
-    set(SOURCES
-        ${SOURCES}
-        "src/Utility/System_iOS.cpp"
-        "src/Utility/server-iOS-jit-user.c"
-    )
-else()
-    set(SOURCES
-        ${SOURCES}
-        "src/Utility/System_generic.cpp"
-    )
-endif()
 
 # Assembly stubs
-
 if(${OS} STREQUAL "win")
     enable_language(ASM_MASM)
     set(ASM_EXT "asm")
@@ -263,7 +247,6 @@ else()
     endif()
 endif()
 
-set(SOURCES ${SOURCES} "src/ExecBlock/${PLATFORM}_Stub.${ASM_EXT}")
 
 
 # Create a list of static LLVM objects
@@ -274,11 +257,10 @@ else()
     PREPEND(LLVM_STATIC_LIBS ${CMAKE_SOURCE_DIR}/${LLVM_LIBS_DIR}/lib ${_LLVM_STATIC_LIBS})
 endif()
 
-# Final QBDI static library is a merge of static libraries
-add_library(QBDI_obj STATIC ${SOURCES})
 
-target_include_directories(QBDI_obj PRIVATE
+target_include_directories(QBDI_obj INTERFACE
     "${CMAKE_CURRENT_SOURCE_DIR}/include/QBDI"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
     "${CMAKE_CURRENT_SOURCE_DIR}/deps/llvm/${PLATFORM}/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/deps/llvm/${PLATFORM}/lib/Target/${LLVM_ARCH}"
@@ -290,14 +272,19 @@ if(${PLATFORM} STREQUAL "win-X86_64")
 else()
     set(qbdi_static_libs ${LLVM_STATIC_LIBS} $<TARGET_FILE:QBDI_obj>)
 endif()
-MERGE_STATIC_LIBS(QBDI_static QBDI \${qbdi_static_libs})
+#MERGE_STATIC_LIBS(QBDI_static QBDI \${qbdi_static_libs})
+add_library(QBDI_static STATIC)
+target_link_libraries(QBDI_static PUBLIC QBDI_obj ${LLVM_LIBS} ${LLVM_STATIC_LIBS} ${LLVM_LIBS})
+#target_link_libraries(QBDI_static ${LLVM_LIBS})
+#target_link_libraries(QBDI_static -Wl,--whole-archive ${LLVM_STATIC_LIBS} -Wl,--no-whole-archive)
+#target_link_libraries(QBDI_static ${LLVM_STATIC_LIBS})
 add_library(QBDI::QBDI_static ALIAS QBDI_static)
 target_include_directories(QBDI_static PUBLIC
     $<INSTALL_INTERFACE:include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
-target_link_libraries(QBDI_static PUBLIC ${LLVM_LIBS})
+#target_link_libraries(QBDI_static PUBLIC ${LLVM_LIBS})
 add_dependencies(QBDI_static QBDI_obj)
 
 # QBDI as a shared library
@@ -308,7 +295,13 @@ target_include_directories(QBDI PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
-target_link_libraries(QBDI PUBLIC ${LLVM_LIBS} PRIVATE QBDI_static)
+target_link_libraries(QBDI
+  PUBLIC
+    ${LLVM_LIBS}
+  PRIVATE
+    QBDI_static
+)
+
 add_dependencies(QBDI QBDI_obj)
 set_target_properties(QBDI PROPERTIES OUTPUT_NAME QBDI)
 # Hack: output stub not in the same directory than static to avoid conflicts
@@ -347,77 +340,77 @@ else()
 endif()
 
 # Install targets
-set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME "QBDI")
-install(TARGETS QBDI_static
-        EXPORT QBDI_targets
-        ARCHIVE DESTINATION lib)
-
-install(TARGETS QBDI
-        EXPORT QBDI_targets
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-        RUNTIME DESTINATION lib)
-
-if(${PLATFORM} STREQUAL "win-X86_64")
-    install(FILES ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/QBDI.exp
-            DESTINATION lib)
-endif()
-
-install(DIRECTORY include/QBDI DESTINATION include/
-        PATTERN "*.in" EXCLUDE)
-
-install(FILES include/QBDI.h DESTINATION include/)
-
-if(FULL_PACKAGE)
-    string(REPLACE ";" " " LLVM_LIBS_STR "${LLVM_LIBS}")
-    configure_file(package/qbdi.pc.in package/qbdi.pc @ONLY)
-    install(FILES ${CMAKE_BINARY_DIR}/package/qbdi.pc DESTINATION lib/pkgconfig/)
-
-    set(RESOURCES_PREFIX ${CMAKE_INSTALL_PREFIX}/share/qbdi)
-
-    install(EXPORT QBDI_targets
-        FILE QBDIConfig.cmake
-        NAMESPACE QBDI::
-        DESTINATION ${RESOURCES_PREFIX}/cmake)
-
-    # QBDI template
-    configure_file(package/qbdi-template.in package/qbdi-template)
-    install(DIRECTORY templates/qbdi_template DESTINATION ${RESOURCES_PREFIX}
-            COMPONENT QBDITemplate)
-    install(PROGRAMS ${CMAKE_BINARY_DIR}/package/qbdi-template DESTINATION bin
-            COMPONENT QBDITemplate)
-
-    # QBDI preload template
-    if(HAS_QBDIPRELOAD)
-        set(PRELOAD_RESOURCES_PREFIX ${CMAKE_INSTALL_PREFIX}/share/qbdipreload)
-
-        configure_file(package/qbdi-preload-template.in package/qbdi-preload-template)
-        install(DIRECTORY templates/qbdi_preload_template DESTINATION ${PRELOAD_RESOURCES_PREFIX}
-                COMPONENT QBDITemplate)
-        install(PROGRAMS ${CMAKE_BINARY_DIR}/package/qbdi-preload-template DESTINATION bin
-                COMPONENT QBDITemplate)
-    endif()
-
-    # Frida template
-    configure_file(package/qbdi-frida-template.in package/qbdi-frida-template)
-    install(DIRECTORY templates/qbdi_frida_template DESTINATION ${RESOURCES_PREFIX}
-            COMPONENT QBDIFridaTemplate)
-    install(PROGRAMS ${CMAKE_BINARY_DIR}/package/qbdi-frida-template DESTINATION bin
-            COMPONENT QBDIFridaTemplate)
-    install(FILES tools/frida-qbdi.js DESTINATION ${RESOURCES_PREFIX})
-
-else()
-    install(EXPORT QBDI_targets
-        FILE QBDIConfig.cmake
-        NAMESPACE QBDI::
-        DESTINATION cmake)
-
-    install(DIRECTORY templates/ DESTINATION templates)
-    install(FILES LICENSE.txt package/Readme.txt DESTINATION .)
-    install(FILES tools/frida-qbdi.js DESTINATION .)
-endif()
-
-# Configure iOS code signature
+#set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME "QBDI")
+#install(TARGETS QBDI_static
+#        EXPORT QBDI_targets
+#        ARCHIVE DESTINATION lib)
+#
+#install(TARGETS QBDI
+#        EXPORT QBDI_targets
+#        LIBRARY DESTINATION lib
+#        ARCHIVE DESTINATION lib
+#        RUNTIME DESTINATION lib)
+#
+#if(${PLATFORM} STREQUAL "win-X86_64")
+#    install(FILES ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/QBDI.exp
+#            DESTINATION lib)
+#endif()
+#
+#install(DIRECTORY include/QBDI DESTINATION include/
+#        PATTERN "*.in" EXCLUDE)
+#
+#install(FILES include/QBDI.h DESTINATION include/)
+#
+#if(FULL_PACKAGE)
+#    string(REPLACE ";" " " LLVM_LIBS_STR "${LLVM_LIBS}")
+#    configure_file(package/qbdi.pc.in package/qbdi.pc @ONLY)
+#    install(FILES ${CMAKE_BINARY_DIR}/package/qbdi.pc DESTINATION lib/pkgconfig/)
+#
+#    set(RESOURCES_PREFIX ${CMAKE_INSTALL_PREFIX}/share/qbdi)
+#
+#    install(EXPORT QBDI_targets
+#        FILE QBDIConfig.cmake
+#        NAMESPACE QBDI::
+#        DESTINATION ${RESOURCES_PREFIX}/cmake)
+#
+#    # QBDI template
+#    configure_file(package/qbdi-template.in package/qbdi-template)
+#    install(DIRECTORY templates/qbdi_template DESTINATION ${RESOURCES_PREFIX}
+#            COMPONENT QBDITemplate)
+#    install(PROGRAMS ${CMAKE_BINARY_DIR}/package/qbdi-template DESTINATION bin
+#            COMPONENT QBDITemplate)
+#
+#    # QBDI preload template
+#    if(HAS_QBDIPRELOAD)
+#        set(PRELOAD_RESOURCES_PREFIX ${CMAKE_INSTALL_PREFIX}/share/qbdipreload)
+#
+#        configure_file(package/qbdi-preload-template.in package/qbdi-preload-template)
+#        install(DIRECTORY templates/qbdi_preload_template DESTINATION ${PRELOAD_RESOURCES_PREFIX}
+#                COMPONENT QBDITemplate)
+#        install(PROGRAMS ${CMAKE_BINARY_DIR}/package/qbdi-preload-template DESTINATION bin
+#                COMPONENT QBDITemplate)
+#    endif()
+#
+#    # Frida template
+#    configure_file(package/qbdi-frida-template.in package/qbdi-frida-template)
+#    install(DIRECTORY templates/qbdi_frida_template DESTINATION ${RESOURCES_PREFIX}
+#            COMPONENT QBDIFridaTemplate)
+#    install(PROGRAMS ${CMAKE_BINARY_DIR}/package/qbdi-frida-template DESTINATION bin
+#            COMPONENT QBDIFridaTemplate)
+#    install(FILES tools/frida-qbdi.js DESTINATION ${RESOURCES_PREFIX})
+#
+#else()
+#    install(EXPORT QBDI_targets
+#        FILE QBDIConfig.cmake
+#        NAMESPACE QBDI::
+#        DESTINATION cmake)
+#
+#    install(DIRECTORY templates/ DESTINATION templates)
+#    install(FILES LICENSE.txt package/Readme.txt DESTINATION .)
+#    install(FILES tools/frida-qbdi.js DESTINATION .)
+#endif()
+#
+## Configure iOS code signature
 if(${OS} STREQUAL "iOS")
     # Find codesign executable
     execute_process(
@@ -426,12 +419,12 @@ if(${OS} STREQUAL "iOS")
         OUTPUT_VARIABLE CODESIGN
     )
     # Define a code signature macro
-    macro(ADD_SIGNATURE target_name)
-        add_custom_command(TARGET ${target_name}
-            POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E env ${CODESIGN} -f -s - $<TARGET_FILE:${target_name}>
-        )
-    endmacro()
+   macro(ADD_SIGNATURE target_name)
+       add_custom_command(TARGET ${target_name}
+           POST_BUILD
+           COMMAND ${CMAKE_COMMAND} -E env ${CODESIGN} -f -s - $<TARGET_FILE:${target_name}>
+       )
+   endmacro()
 else()
     # Define a dummy code signature macro
     macro(ADD_SIGNATURE target_name)

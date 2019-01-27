@@ -1,0 +1,12 @@
+set(QBDI_EXEC_BROKER_SRC
+  "${CMAKE_CURRENT_LIST_DIR}/ExecBroker.cpp"
+)
+
+set(QBDI_EXEC_BROKER_INC
+  "${CMAKE_CURRENT_LIST_DIR}/ExecBroker.h"
+)
+
+target_sources(QBDI_obj INTERFACE
+  ${QBDI_EXEC_BROKER_SRC}
+  ${QBDI_EXEC_BROKER_INC}
+)

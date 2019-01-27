@@ -24,19 +24,20 @@
 #include "llvm/MC/MCInst.h"
 
 #include "Patch/Types.h"
+#include "Patch/TempManager.h"
 #include "Patch/PatchUtils.h"
 
 namespace QBDI {
 
 class InstTransform {
-public:
+  public:
 
     using SharedPtr    = std::shared_ptr<InstTransform>;
     using SharedPtrVec = std::vector<std::shared_ptr<InstTransform>>;
 
     virtual void transform(llvm::MCInst &inst, rword address, size_t instSize, TempManager *temp_manager) = 0;
 
-    virtual ~InstTransform() {}
+    virtual ~InstTransform();
 };
 
 class SetOperand : public InstTransform, public AutoAlloc<InstTransform, SetOperand> {
@@ -53,42 +54,29 @@ class SetOperand : public InstTransform, public AutoAlloc<InstTransform, SetOper
         Constant imm;
     // };
 
-public:
-
+  public:
     /*! Set the operand opn of the instruction as the Temp temp.
      *
      * @param[in] opn   Operand index in the LLVM MCInst representation.
      * @param[in] temp  Temporary register which will be set as the new operand
     */
-    SetOperand(Operand opn, Temp temp) : opn(opn), type(TempOperandType), temp(temp), reg(0), imm(0) {}
+    SetOperand(Operand opn, Temp temp);
 
     /*! Set the operand opn of the instruction as the Reg reg.
      *
      * @param[in] opn  Operand index in the LLVM MCInst representation.
      * @param[in] reg  Register which will be set as the new operand.
     */
-    SetOperand(Operand opn, Reg reg) : opn(opn), type(RegOperandType), temp(0), reg(reg), imm(0) {}
+    SetOperand(Operand opn, Reg reg);
 
     /*! Set the operand opn of the instruction as the immediate imm.
      *
      * @param[in] opn  Operand index in the LLVM MCInst representation.
      * @param[in] imm  Constant which will be set as the new immediate operand.
     */
-    SetOperand(Operand opn, Constant imm) : opn(opn), type(ImmOperandType), temp(0), reg(0), imm(imm) {}
+    SetOperand(Operand opn, Constant imm);
 
-    void transform(llvm::MCInst &inst, rword address, size_t instSize, TempManager *temp_manager) {
-        switch(type) {
-            case TempOperandType:
-                inst.getOperand(opn).setReg(temp_manager->getRegForTemp(temp));
-                break;
-            case RegOperandType:
-                inst.getOperand(opn).setReg(reg);
-                break;
-            case ImmOperandType:
-                inst.getOperand(opn).setImm(imm);
-                break;
-        }
-    }
+    virtual void transform(llvm::MCInst &inst, rword address, size_t instSize, TempManager *temp_manager) override;
 };
 
 class SubstituteWithTemp : public InstTransform,
@@ -96,23 +84,16 @@ class SubstituteWithTemp : public InstTransform,
     Reg  reg;
     Temp temp;
 
-public:
+  public:
 
     /*! Substitute every reference to reg in the operands of the instruction with temp.
      *
      * @param[in] reg   Register which will be substituted.
      * @param[in] temp  Temporary register which will be substituted with.
     */
-    SubstituteWithTemp(Reg reg, Temp temp) : reg(reg), temp(temp) {};
+    SubstituteWithTemp(Reg reg, Temp temp);
 
-    void transform(llvm::MCInst &inst, rword address, size_t instSize, TempManager *temp_manager) {
-        for(unsigned int i = 0; i < inst.getNumOperands(); i++) {
-            llvm::MCOperand &op = inst.getOperand(i);
-            if(op.isReg() && op.getReg() == reg) {
-                op.setReg(temp_manager->getRegForTemp(temp));
-            }
-        }
-    }
+    virtual void transform(llvm::MCInst &inst, rword address, size_t instSize, TempManager *temp_manager) override;
 };
 
 class AddOperand : public InstTransform, public AutoAlloc<InstTransform, AddOperand> {
@@ -137,57 +118,38 @@ public:
      * @param[in] opn   Operand index in LLVM MCInst representation.
      * @param[in] temp  Temp to be inserted as a new operand.
     */
-    AddOperand(Operand opn, Temp temp) : opn(opn), type(TempOperandType), temp(temp), reg(0), imm(0) {}
+    AddOperand(Operand opn, Temp temp);
 
     /*! Add a new register operand to the instruction by inserting it at operand index opn.
      *
      * @param[in] opn  Operand index in LLVM MCInst representation.
      * @param[in] reg  Register to be inserted as a new operand.
     */
-    AddOperand(Operand opn, Reg reg) : opn(opn), type(RegOperandType), temp(0), reg(reg), imm(0) {}
+    AddOperand(Operand opn, Reg reg);
 
     /*! Add a new immediate operand to the instruction by inserting it at operand index opn.
      *
      * @param[in] opn  Operand index in LLVM MCInst representation.
      * @param[in] imm  Constant to be inserted as a new immediate operand.
     */
-    AddOperand(Operand opn, Constant imm) : opn(opn), type(ImmOperandType), temp(0), reg(0), imm(imm) {}
+    AddOperand(Operand opn, Constant imm);
 
-    void transform(llvm::MCInst &inst, rword address, size_t instSize, TempManager *temp_manager) {
-        switch(type) {
-            case TempOperandType:
-                inst.insert(inst.begin() + opn, llvm::MCOperand::createReg(temp_manager->getRegForTemp(temp)));
-                break;
-            case RegOperandType:
-                inst.insert(inst.begin() + opn, llvm::MCOperand::createReg(reg));
-                break;
-            case ImmOperandType:
-                inst.insert(inst.begin() + opn, llvm::MCOperand::createImm(imm));
-                break;
-        }
-    }
+    virtual void transform(llvm::MCInst &inst, rword address, size_t instSize, TempManager *temp_manager) override;
 };
 
 class RemoveOperand : public InstTransform, public AutoAlloc<InstTransform, RemoveOperand> {
 
     Reg reg;
 
-public:
+  public:
 
     /*! Remove the first occurence of reg in the operands of the instruction.
      *
      * @param[in] reg Register to remove from the operand list.
     */
-    RemoveOperand(Reg reg) : reg(reg) {}
+    RemoveOperand(Reg reg);
 
-    void transform(llvm::MCInst &inst, rword address, size_t instSize, TempManager *temp_manager) {
-        for(auto it = inst.begin(); it != inst.end(); ++it) {
-            if(it->isReg() && it->getReg() == reg) {
-                inst.erase(it);
-                break;
-            }
-        }
-    }
+    virtual void transform(llvm::MCInst &inst, rword address, size_t instSize, TempManager *temp_manager) override;
 };
 
 
@@ -201,32 +163,11 @@ class SetOpcode : public InstTransform, public AutoAlloc<InstTransform, SetOpcod
      *
      * @param[in] opcode New opcode to set as the instruction opcode.
     */
-    SetOpcode(unsigned int opcode) : opcode(opcode) {}
+    SetOpcode(unsigned int opcode);
 
-    void transform(llvm::MCInst &inst, rword address, size_t instSize, TempManager *temp_manager) {
-        inst.setOpcode(opcode);
-    }
+    virtual void transform(llvm::MCInst &inst, rword address, size_t instSize, TempManager *temp_manager) override;
 };
 
-//TODO: Rename and Move to ARM
-class TestTransform : public InstTransform, public AutoAlloc<InstTransform, TestTransform> {
-    Temp temp;
-
-  public:
-    TestTransform(Temp tmp) : temp(tmp) {}
-
-    void transform(llvm::MCInst &inst, rword address, size_t instSize, TempManager *temp_manager) {
-      llvm::MCInst newInst;
-      newInst.setOpcode(llvm::ARM::t2LDRi12);
-      newInst.addOperand(inst.getOperand(0));
-      newInst.addOperand(llvm::MCOperand::createReg(temp_manager->getRegForTemp(this->temp)));
-      newInst.addOperand(inst.getOperand(1));
-      newInst.addOperand(llvm::MCOperand::createImm(14));
-      newInst.addOperand(llvm::MCOperand::createReg(0));
-      inst = std::move(newInst);
-
-    }
-};
 
 }
 

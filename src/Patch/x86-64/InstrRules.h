@@ -15,26 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef INSTRRULES_H
-#define INSTRRULES_H
+#ifndef INSTRRULES_X86_64_H
+#define INSTRRULES_X86_64_H
 
 #include <memory>
 #include <vector>
 
+#include "llvm/MC/MCInst.h"
+
 #include "Callback.h"
-#include "Patch/InstrRule.h"
+#include "Patch/PatchUtils.h"
+#include "Patch/x86-64/PatchGenerator.h"
 
 namespace QBDI {
 
-/*
- * Setup a user callback in the host state
- *
- * Created patch generator can be used in any instruction rules.
- *
- * @param[in] cbk   Pointer to a user callback
- * @param[in] data  Opaque pointer to user callback data
- */
-QBDI_EXPORT PatchGenerator::SharedPtrVec getCallbackGenerator(InstCallback cbk, void* data);
+class InstrRule;
+
+RelocatableInst::SharedPtrVec getBreakToHost(Reg temp, CPUMode cpuMode);
+
+std::vector<std::shared_ptr<InstrRule>> getMemAccessInstrRules();
 
 }
 

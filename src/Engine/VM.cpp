@@ -24,6 +24,12 @@
 #include "Patch/InstrRules.h"
 #include "Utility/LogSys.h"
 
+#if defined(QBDI_ARCH_X86_64) || defined(QBDI_ARCH_X86)
+  #include "Patch/x86-64/InstrRules.h"
+#elif defined(QBDI_ARCH_ARM)
+  #include "Patch/arm/InstrRules.h"
+#endif
+
 // Mask to identify Virtual Callback events
 #define EVENTID_VIRTCB_MASK  (1UL << 31)
 

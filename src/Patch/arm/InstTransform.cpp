@@ -15,27 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef INSTRRULES_H
-#define INSTRRULES_H
-
-#include <memory>
-#include <vector>
-
-#include "Callback.h"
-#include "Patch/InstrRule.h"
-
+#include "Patch/arm/InstTransform.h"
 namespace QBDI {
 
-/*
- * Setup a user callback in the host state
- *
- * Created patch generator can be used in any instruction rules.
- *
- * @param[in] cbk   Pointer to a user callback
- * @param[in] data  Opaque pointer to user callback data
- */
-QBDI_EXPORT PatchGenerator::SharedPtrVec getCallbackGenerator(InstCallback cbk, void* data);
+ThumbLDRpciTransform::ThumbLDRpciTransform(Temp tmp) :
+  temp(tmp)
+{}
+
+void ThumbLDRpciTransform::transform(llvm::MCInst &inst, rword address, size_t instSize, TempManager *temp_manager) {
+  llvm::MCInst newInst;
+  newInst.setOpcode(llvm::ARM::t2LDRi12);
+  newInst.addOperand(inst.getOperand(0));
+  newInst.addOperand(llvm::MCOperand::createReg(temp_manager->getRegForTemp(this->temp)));
+  newInst.addOperand(inst.getOperand(1));
+  newInst.addOperand(llvm::MCOperand::createImm(14));
+  newInst.addOperand(llvm::MCOperand::createReg(0));
+  inst = std::move(newInst);
 
 }
-
-#endif
+}

@@ -27,57 +27,23 @@
 namespace QBDI {
 
 class Patch {
-public:
+  public:
 
     InstMetadata metadata;
     RelocatableInst::SharedPtrVec insts;
 
     using Vec = std::vector<Patch>;
-    
-    Patch() {
-        metadata.patchSize = 0;
-        metadata.cpuMode = (CPUMode) 0;
-    }
 
-    Patch(llvm::MCInst inst, rword address, rword instSize, CPUMode cpuMode) {
-        metadata.patchSize = 0;
-        metadata.cpuMode = cpuMode;
-        setInst(inst, address, instSize);
-    }
+    Patch();
+    Patch(llvm::MCInst inst, rword address, rword instSize, CPUMode cpuMode);
 
-    void setMerge(bool merge) {
-        metadata.merge = merge;
-    }
-
-    void setModifyPC(bool modifyPC) {
-        metadata.modifyPC = modifyPC;
-    }
-
-    void setInst(llvm::MCInst inst, rword address, rword instSize) {
-        metadata.inst = inst;
-        metadata.address = address;
-        metadata.instSize = instSize;
-    }
-
-    void append(const RelocatableInst::SharedPtrVec v) {
-        insts.insert(insts.end(), v.begin(), v.end());
-        metadata.patchSize += v.size();
-    }
-
-    void prepend(const RelocatableInst::SharedPtrVec v) {
-        insts.insert(insts.begin(), v.begin(), v.end());
-        metadata.patchSize += v.size();
-    } 
-
-    void append(const RelocatableInst::SharedPtr r) {
-        insts.push_back(r);
-        metadata.patchSize += 1;
-    }
-
-    void prepend(const RelocatableInst::SharedPtr r) {
-        insts.insert(insts.begin(), r);
-        metadata.patchSize += 1;
-    } 
+    void setMerge(bool merge);
+    void setModifyPC(bool modifyPC);
+    void setInst(llvm::MCInst inst, rword address, rword instSize);
+    void append(const RelocatableInst::SharedPtrVec v);
+    void prepend(const RelocatableInst::SharedPtrVec v);
+    void append(const RelocatableInst::SharedPtr r);
+    void prepend(const RelocatableInst::SharedPtr r);
 };
 
 }

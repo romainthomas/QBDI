@@ -23,6 +23,14 @@
 #include "Memory.h"
 #include "Utility/LogSys.h"
 #include "Utility/System.h"
+#include "ExecBlock/utils.h"
+
+
+#if defined(QBDI_ARCH_X86_64) || defined(QBDI_ARCH_X86)
+  #include "Patch/x86-64/PatchRules.h"
+#elif defined(QBDI_ARCH_ARM)
+  #include "Patch/arm/PatchRules.h"
+#endif
 
 #include <iostream>
 #include <sstream>
@@ -49,25 +57,6 @@ uint32_t ExecBlock::epilogueSize = 0;
 RelocatableInst::SharedPtrVec ExecBlock::execBlockPrologue = RelocatableInst::SharedPtrVec();
 RelocatableInst::SharedPtrVec ExecBlock::execBlockEpilogue = RelocatableInst::SharedPtrVec();
 void (*ExecBlock::runCodeBlockFct)(void*) = NULL;
-
-size_t registerIndex(unsigned regId) {
-  static const std::map<unsigned, size_t> regMap {
-    {llvm::ARM::R0, 0},
-    {llvm::ARM::R1, 1},
-    {llvm::ARM::R2, 2},
-    {llvm::ARM::R3, 3},
-    {llvm::ARM::R4, 4},
-    {llvm::ARM::R5, 5},
-    {llvm::ARM::R6, 6},
-    {llvm::ARM::R7, 7},
-    {llvm::ARM::R8, 8},
-    {llvm::ARM::R9, 0},
-    {llvm::ARM::R10, 10},
-    {llvm::ARM::R11, 11},
-    {llvm::ARM::R12, 12},
-  };
-  return regMap.at(regId);
-}
 
 ExecBlock::ExecBlock(Assembly* assembly[CPUMode::COUNT], VMInstanceRef vminstance) : vminstance{vminstance} {
 
@@ -306,6 +295,7 @@ VMAction ExecBlock::execute() {
 }
 
 bool ExecBlock::setScratchRegister(std::vector<Patch>::const_iterator seqIt, std::vector<Patch>::const_iterator seqEnd) {
+#if defined(QBDI_ARCH_ARM)
   // Register used within the sequence
   std::set<unsigned> registerUsed;
   std::vector<unsigned> freeRegister = {
@@ -338,6 +328,7 @@ bool ExecBlock::setScratchRegister(std::vector<Patch>::const_iterator seqIt, std
       return true;
     }
   }
+#endif
   return false;
 }
 
@@ -381,6 +372,8 @@ SeqWriteResult ExecBlock::writeSequence(std::vector<Patch>::const_iterator seqIt
         // Attempt to write a complete patch. If not, rollback to the last complete patch written
 
         // Fill the scratch register
+        //
+        #if defined(QBDI_ARCH_ARM)
         if (cpuMode == CPUMode::Thumb and not written) {
 
           if (not this->setScratchRegister(seqIt, seqEnd)) {
@@ -403,6 +396,7 @@ SeqWriteResult ExecBlock::writeSequence(std::vector<Patch>::const_iterator seqIt
           written = true;
 
         }
+        #endif
 
         for (const RelocatableInst::SharedPtr& inst : seqIt->insts) {
             if (getEpilogueOffset() > MINIMAL_BLOCK_SIZE) {
@@ -463,6 +457,8 @@ SeqWriteResult ExecBlock::writeSequence(std::vector<Patch>::const_iterator seqIt
 
     // JIT the jump to epilogue
     RelocatableInst::SharedPtrVec jmpEpilogue;
+
+    #if defined(QBDI_ARCH_ARM)
     if (cpuMode == CPUMode::Thumb) {
       unsigned scratchReg = this->getScratchRegister();
       size_t registerIdx  = registerIndex(scratchReg);
@@ -472,6 +468,9 @@ SeqWriteResult ExecBlock::writeSequence(std::vector<Patch>::const_iterator seqIt
     } else {
       jmpEpilogue = JmpEpilogue().generate(nullptr, 0, 0, cpuMode, nullptr, nullptr);
     }
+    #else
+      jmpEpilogue = JmpEpilogue().generate(nullptr, 0, 0, cpuMode, nullptr, nullptr);
+    #endif
     for(RelocatableInst::SharedPtr &inst : jmpEpilogue) {
         assembly[cpuMode]->writeInstruction(inst->reloc(this, cpuMode), codeStream);
     }

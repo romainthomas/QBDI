@@ -17,6 +17,14 @@
  */
 #include "Patch/InstrRules.h"
 
+#if defined(QBDI_ARCH_X86_64) || defined(QBDI_ARCH_X86)
+  #include "Patch/x86-64/InstrRules.h"
+  #include "Patch/x86-64/PatchGenerator.h"
+#elif defined(QBDI_ARCH_ARM)
+  #include "Patch/arm/InstrRules.h"
+  #include "Patch/arm/PatchGenerator.h"
+#endif
+
 namespace QBDI {
 
 /*! Output a list of PatchGenerator which would set up the host state part of the context for

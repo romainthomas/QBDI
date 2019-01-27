@@ -41,6 +41,12 @@
 #include "Utility/Assembly.h"
 #include "Utility/LogSys.h"
 
+#if defined(QBDI_ARCH_X86_64) || defined(QBDI_ARCH_X86)
+  #include "Patch/x86-64/PatchRules.h"
+#elif defined(QBDI_ARCH_ARM)
+  #include "Patch/arm/PatchRules.h"
+#endif
+
 
 // Mask to identify VM events
 #define EVENTID_VM_MASK  (1UL << 30)
